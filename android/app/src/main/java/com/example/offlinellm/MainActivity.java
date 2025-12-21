@@ -38,57 +38,34 @@ public class MainActivity extends AppCompatActivity {
         binding.chatRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         binding.chatRecyclerView.setAdapter(adapter);
 
-        binding.sendBtn.setOnClickListener(v -> sendMessage());
-        binding.manageModelsBtn.setOnClickListener(v -> {
+        binding.sendButton.setOnClickListener(v -> sendMessage());
+        binding.modelButton.setOnClickListener(v -> {
             startActivity(new Intent(this, ModelActivity.class));
         });
 
-        binding.menuBtn.setOnClickListener(this::showSettingsMenu);
+        setupQualityChips();
 
         remoteEngine = new RemoteInference("YOUR_GROQ_API_KEY"); 
-
-        updateWelcomeVisibility();
         
         // Initial auto-load
         loadBestModel(currentPreference);
     }
 
-    private void showSettingsMenu(View v) {
-        PopupMenu popup = new PopupMenu(this, v);
-        popup.getMenu().add(0, 1, 0, "Quality: High");
-        popup.getMenu().add(0, 2, 0, "Quality: Balanced");
-        popup.getMenu().add(0, 3, 0, "Quality: Medium");
-        popup.getMenu().add(0, 4, 0, "Quality: Light");
-        popup.getMenu().add(0, 5, 0, "Quality: Ultra Light");
-        
-        MenuItem remoteItem = popup.getMenu().add(0, 6, 0, "Remote Fallback: " + (isRemoteFallbackEnabled ? "ON" : "OFF"));
-
-        popup.setOnMenuItemClickListener(item -> {
-            switch (item.getItemId()) {
-                case 1: currentPreference = ModelManager.Tier.HIGH_QUALITY; break;
-                case 2: currentPreference = ModelManager.Tier.BALANCED; break;
-                case 3: currentPreference = ModelManager.Tier.MEDIUM; break;
-                case 4: currentPreference = ModelManager.Tier.LIGHT; break;
-                case 5: currentPreference = ModelManager.Tier.ULTRA_LIGHT; break;
-                case 6: 
-                    isRemoteFallbackEnabled = !isRemoteFallbackEnabled;
-                    Toast.makeText(this, "Remote Fallback: " + (isRemoteFallbackEnabled ? "Enabled" : "Disabled"), Toast.LENGTH_SHORT).show();
-                    return true;
+    private void setupQualityChips() {
+        binding.qualityChipGroup.setOnCheckedChangeListener((group, checkedId) -> {
+            if (checkedId == binding.chipHigh.getId()) {
+                currentPreference = ModelManager.Tier.HIGH_QUALITY;
+            } else if (checkedId == binding.chipBalanced.getId()) {
+                currentPreference = ModelManager.Tier.BALANCED;
+            } else if (checkedId == binding.chipFast.getId()) {
+                currentPreference = ModelManager.Tier.ULTRA_LIGHT;
             }
             loadBestModel(currentPreference);
-            return true;
         });
-        popup.show();
     }
 
     private void updateWelcomeVisibility() {
-        if (messages.isEmpty()) {
-            binding.welcomeContainer.setVisibility(View.VISIBLE);
-            binding.chatRecyclerView.setVisibility(View.GONE);
-        } else {
-            binding.welcomeContainer.setVisibility(View.GONE);
-            binding.chatRecyclerView.setVisibility(View.VISIBLE);
-        }
+        // Handled by RecyclerView visibility in this simplified layout
     }
 
     private void loadBestModel(ModelManager.Tier preference) {
@@ -97,18 +74,17 @@ public class MainActivity extends AppCompatActivity {
         if (info != null) {
             loadModel(info);
         } else {
-            mainHandler.post(() -> binding.statusText.setText("RAY AI Status: Ready (No local model)"));
+            mainHandler.post(() -> binding.statusText.setText("RAY AI Status: Ready"));
         }
     }
 
     private void sendMessage() {
-        String prompt = binding.promptEdit.getText().toString().trim();
+        String prompt = binding.promptInput.getText().toString().trim();
         if (prompt.isEmpty()) return;
 
         messages.add(new ChatMessage("You", prompt));
         adapter.notifyItemInserted(messages.size() - 1);
-        binding.promptEdit.setText("");
-        updateWelcomeVisibility();
+        binding.promptInput.setText("");
 
         ChatMessage assistantMsg = new ChatMessage("AI", "");
         messages.add(assistantMsg);

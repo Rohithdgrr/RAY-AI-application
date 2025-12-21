@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">RAY AI</string>
     <string name="welcome_message">What can I help with?</string>
-    <string name="caption">Your intelligent offline companion</string>
+    <string name="caption">The Future of Offline Intelligence</string>
     <string name="status_not_loaded">RAY AI Status: Ready</string>
     <string name="status_loading">Model: Loading...</string>
     <string name="status_loaded">Model: Loaded</string>
