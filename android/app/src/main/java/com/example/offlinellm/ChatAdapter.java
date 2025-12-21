@@ -30,17 +30,22 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
         ChatMessage message = messages.get(position);
         holder.sender.setText(message.getSender());
         holder.text.setText(message.getText());
+        holder.timestamp.setText(message.getFormattedTime());
 
-        ConstraintLayout.LayoutParams params = (ConstraintLayout.LayoutParams) holder.bubbleLayout.getLayoutParams();
+        androidx.constraintlayout.widget.ConstraintLayout.LayoutParams params = (androidx.constraintlayout.widget.ConstraintLayout.LayoutParams) holder.bubbleLayout.getLayoutParams();
         
         if (message.getSender().equalsIgnoreCase("You")) {
             params.horizontalBias = 1.0f;
             holder.bubbleLayout.setBackgroundResource(R.drawable.bubble_user);
             holder.sender.setVisibility(View.GONE);
+            holder.text.setTextColor(holder.itemView.getContext().getColor(android.R.color.white));
+            holder.timestamp.setTextColor(holder.itemView.getContext().getColor(R.color.text_secondary));
         } else {
             params.horizontalBias = 0.0f;
             holder.bubbleLayout.setBackgroundResource(R.drawable.bubble_ai);
             holder.sender.setVisibility(View.VISIBLE);
+            holder.text.setTextColor(holder.itemView.getContext().getColor(R.color.text_primary));
+            holder.timestamp.setTextColor(holder.itemView.getContext().getColor(R.color.text_secondary));
         }
         holder.bubbleLayout.setLayoutParams(params);
     }
@@ -49,12 +54,13 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
     public int getItemCount() { return messages.size(); }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
-        TextView sender, text;
+        TextView sender, text, timestamp;
         LinearLayout bubbleLayout;
         ViewHolder(View view) {
             super(view);
             sender = view.findViewById(R.id.messageSender);
             text = view.findViewById(R.id.messageText);
+            timestamp = view.findViewById(R.id.timestampText);
             bubbleLayout = view.findViewById(R.id.bubbleLayout);
         }
     }

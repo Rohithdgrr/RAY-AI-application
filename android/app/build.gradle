@@ -17,6 +17,13 @@ android {
         ndk {
             abiFilters "arm64-v8a", "x86_64"
         }
+        
+        externalNativeBuild {
+            cmake {
+                cppFlags "-std=c++17"
+                arguments "-DANDROID_STL=c++_shared"
+            }
+        }
     }
 
     buildTypes {
@@ -37,20 +44,10 @@ android {
         viewBinding true
     }
 
-    sourceSets {
-        main {
-            java {
-                exclude 'com/example/offlinellm/OnnxInference.java'
-                exclude 'com/example/offlinellm/SecurityHelper.java'
-                exclude 'com/example/offlinellm/ChatAdapter.java'
-                exclude 'com/example/offlinellm/ChatMessage.java'
-                exclude 'com/example/offlinellm/InferenceEngine.java'
-                exclude 'com/example/offlinellm/ModelManager.java'
-                exclude 'com/example/offlinellm/RemoteInference.java'
-                exclude 'com/example/offlinellm/DownloadReceiver.java'
-                exclude 'com/example/offlinellm/LlamaInference.java'
-                exclude 'com/example/offlinellm/ModelActivity.java'
-            }
+    externalNativeBuild {
+        cmake {
+            path "src/main/cpp/CMakeLists.txt"
+            version "4.1.2"
         }
     }
 }
@@ -59,6 +56,10 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.11.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
+    
+    // Security & AI Requirements
+    implementation 'androidx.security:security-crypto:1.1.0-alpha06'
+    implementation 'com.microsoft.onnxruntime:onnxruntime-android:1.17.1'
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'

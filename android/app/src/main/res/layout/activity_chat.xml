@@ -16,22 +16,22 @@
         android:layout_gravity="center_horizontal"
         android:layout_marginBottom="12dp" />
 
-    <ScrollView
-        android:id="@+id/chatScroll"
+    <TextView
+        android:id="@+id/statusIndicator"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Model: Loading..."
+        android:textSize="14sp"
+        android:textColor="@color/text_secondary"
+        android:paddingBottom="8dp" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/chatRecyclerView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:fillViewport="true"
-        android:background="@color/white">
-
-        <TextView
-            android:id="@+id/chatLog"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="12dp"
-            android:textColor="@color/text_primary"
-            android:textSize="16sp" />
-    </ScrollView>
+        android:clipToPadding="false"
+        android:paddingBottom="8dp" />
 
     <LinearLayout
         android:layout_width="match_parent"

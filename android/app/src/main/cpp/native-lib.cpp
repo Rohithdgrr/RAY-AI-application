@@ -12,106 +12,134 @@
 
 extern "C" {
 
+struct LlamaContextWrapper {
+    llama_model * model;
+    llama_context * ctx;
+    llama_sampler * smpl;
+    uint32_t n_past = 0;
+};
+
 JNIEXPORT jlong JNICALL
 Java_com_example_offlinellm_LlamaInference_nativeInit(JNIEnv *env, jobject thiz, jstring model_path) {
     const char *path = env->GetStringUTFChars(model_path, nullptr);
     LOGD("Initializing model from: %s", path);
 
+    // CRITICAL: Load backends
+    // In newer llama.cpp, backend initialization might be handled differently, 
+    // but ensured through common initialization patterns.
+    
     llama_model_params model_params = llama_model_default_params();
     model_params.use_mmap = true;
     
-    llama_model * model = llama_load_model_from_file(path, model_params);
+    llama_model * model = llama_model_load_from_file(path, model_params);
     if (!model) {
         LOGE("Failed to load model from: %s", path);
         env->ReleaseStringUTFChars(model_path, path);
         return 0;
     }
 
+    const int n_ctx = 2048;
     llama_context_params ctx_params = llama_context_default_params();
-    ctx_params.n_ctx = 2048;
-    ctx_params.n_threads = 4;
+    ctx_params.n_ctx = n_ctx;
+    ctx_params.n_batch = 512;
+    ctx_params.n_threads = std::thread::hardware_concurrency();
     
-    llama_context * ctx = llama_new_context_with_model(model, ctx_params);
+    llama_context * ctx = llama_init_from_model(model, ctx_params);
     if (!ctx) {
         LOGE("Failed to create context");
-        llama_free_model(model);
+        llama_model_free(model);
         env->ReleaseStringUTFChars(model_path, path);
         return 0;
     }
 
+    auto sparams = llama_sampler_chain_default_params();
+    llama_sampler * smpl = llama_sampler_chain_init(sparams);
+    llama_sampler_chain_add(smpl, llama_sampler_init_greedy());
+
     env->ReleaseStringUTFChars(model_path, path);
-    return (jlong)ctx;
+    
+    LlamaContextWrapper * wrapper = new LlamaContextWrapper();
+    wrapper->model = model;
+    wrapper->ctx = ctx;
+    wrapper->smpl = smpl;
+    wrapper->n_past = 0;
+    
+    return (jlong)wrapper;
 }
 
 JNIEXPORT void JNICALL
 Java_com_example_offlinellm_LlamaInference_nativeGenerate(JNIEnv *env, jobject thiz, jlong ptr, jstring prompt, jobject cb) {
     const char *p = env->GetStringUTFChars(prompt, nullptr);
+    LlamaContextWrapper * wrapper = (LlamaContextWrapper *)ptr;
     
+    if (!wrapper || !wrapper->ctx) {
+        if (p) env->ReleaseStringUTFChars(prompt, p);
+        return;
+    }
+
     jclass cbClass = env->GetObjectClass(cb);
     jmethodID onTokenID = env->GetMethodID(cbClass, "onToken", "(Ljava/lang/String;)V");
     jmethodID onCompleteID = env->GetMethodID(cbClass, "onComplete", "()V");
 
-    llama_context * ctx = (llama_context *)ptr;
-    if (!ctx) {
-        LOGE("Invalid context pointer");
-        env->CallVoidMethod(cb, onCompleteID);
-        env->ReleaseStringUTFChars(prompt, p);
-        return;
+    const llama_vocab * vocab = llama_model_get_vocab(wrapper->model);
+    
+    // Tokenize
+    int32_t n_tokens_max = strlen(p) + 4;
+    std::vector<llama_token> tokens(n_tokens_max);
+    int32_t n_tokens = llama_tokenize(vocab, p, strlen(p), tokens.data(), tokens.size(), wrapper->n_past == 0, true);
+    if (n_tokens < 0) {
+        tokens.resize(-n_tokens);
+        n_tokens = llama_tokenize(vocab, p, strlen(p), tokens.data(), tokens.size(), wrapper->n_past == 0, true);
     }
+    tokens.resize(n_tokens);
 
-    std::vector<llama_token> tokens;
-    tokens = llama_tokenize(ctx, p, true);
+    // Initial batch
+    llama_batch batch = llama_batch_get_one(tokens.data(), tokens.size());
     
-    llama_batch batch = llama_batch_init(tokens.size(), 0, 1);
-    
-    for (size_t i = 0; i < tokens.size(); i++) {
-        llama_batch_add(&batch, tokens[i], i, {0}, false);
-    }
-    
-    if (llama_decode(ctx, batch) != 0) {
-        LOGE("Failed to decode prompt");
-        llama_batch_free(batch);
-        env->CallVoidMethod(cb, onCompleteID);
-        env->ReleaseStringUTFChars(prompt, p);
-        return;
-    }
+    int n_predict = 512;
+    int n_gen = 0;
 
-    for (int i = 0; i < 100; i++) {
-        llama_token new_token = llama_sample_token(ctx, NULL);
-        
-        if (new_token == llama_token_eos(ctx)) {
+    while (n_gen < n_predict) {
+        if (llama_decode(wrapper->ctx, batch)) {
+            LOGE("Failed to decode");
             break;
         }
-        
-        std::string token_str = llama_token_to_piece(ctx, new_token);
-        jstring jtoken = env->NewStringUTF(token_str.c_str());
-        env->CallVoidMethod(cb, onTokenID, jtoken);
-        env->DeleteLocalRef(jtoken);
-        
-        llama_batch_clear(batch);
-        llama_batch_add(&batch, new_token, tokens.size() + i, {0}, false);
-        
-        if (llama_decode(ctx, batch) != 0) {
-            LOGE("Failed to decode token");
+
+        wrapper->n_past += batch.n_tokens;
+
+        llama_token new_token_id = llama_sampler_sample(wrapper->smpl, wrapper->ctx, -1);
+
+        if (llama_vocab_is_eog(vocab, new_token_id)) {
             break;
         }
-        
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+        char buf[256];
+        int n = llama_token_to_piece(vocab, new_token_id, buf, sizeof(buf), 0, true);
+        if (n > 0) {
+            std::string piece(buf, n);
+            jstring jtoken = env->NewStringUTF(piece.c_str());
+            env->CallVoidMethod(cb, onTokenID, jtoken); // This is safe because onTokenID is cached and cb is valid
+            env->DeleteLocalRef(jtoken);
+        } else if (n < 0) {
+           // Piece too small, or other error. For now, just skip.
+        }
+
+        batch = llama_batch_get_one(&new_token_id, 1);
+        n_gen++;
     }
 
-    llama_batch_free(batch);
     env->CallVoidMethod(cb, onCompleteID);
     env->ReleaseStringUTFChars(prompt, p);
 }
 
 JNIEXPORT void JNICALL
 Java_com_example_offlinellm_LlamaInference_nativeFree(JNIEnv *env, jobject thiz, jlong ptr) {
-    LOGD("Freeing native context");
-    llama_context * ctx = (llama_context *)ptr;
-    if (ctx) {
-        llama_model * model = llama_get_model(ctx);
-        llama_free(ctx);
-        llama_free_model(model);
+    LlamaContextWrapper * wrapper = (LlamaContextWrapper *)ptr;
+    if (wrapper) {
+        if (wrapper->ctx) llama_free(wrapper->ctx);
+        if (wrapper->model) llama_model_free(wrapper->model);
+        if (wrapper->smpl) llama_sampler_free(wrapper->smpl);
+        delete wrapper;
     }
 }
 

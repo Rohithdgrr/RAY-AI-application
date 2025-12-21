@@ -1,6 +1,6 @@
 package com.example.offlinellm;
 
-import ai.onnxruntime.OnnxJavaServer;
+import android.content.Context;
 import ai.onnxruntime.OrtEnvironment;
 import ai.onnxruntime.OrtSession;
 import java.io.File;
@@ -9,14 +9,27 @@ import java.util.Collections;
 public class OnnxInference implements InferenceEngine {
     private OrtEnvironment env;
     private OrtSession session;
+    private File tempDecryptedFile;
+    private final Context context;
+
+    public OnnxInference(Context context) {
+        this.context = context;
+    }
 
     @Override
-    public void loadModel(File modelFile) throws Exception {
+    public void loadModel(File encryptedModelFile) throws Exception {
+        // Decrypt to temp file
+        tempDecryptedFile = new File(context.getCacheDir(), "temp_onnx_" + System.currentTimeMillis() + ".onnx");
+        SecurityHelper.decryptFile(context, encryptedModelFile, tempDecryptedFile);
+
         env = OrtEnvironment.getEnvironment();
         OrtSession.SessionOptions options = new OrtSession.SessionOptions();
-        // Enable NNAPI
-        options.addNnapi();
-        session = env.createSession(modelFile.getAbsolutePath(), options);
+        try {
+            options.addNnapi(); // Attempt NNAPI acceleration
+        } catch (Exception e) {
+            // Fallback to CPU if NNAPI fails or not available
+        }
+        session = env.createSession(tempDecryptedFile.getAbsolutePath(), options);
     }
 
     @Override
@@ -44,6 +57,9 @@ public class OnnxInference implements InferenceEngine {
         try {
             if (session != null) session.close();
             if (env != null) env.close();
+            if (tempDecryptedFile != null && tempDecryptedFile.exists()) {
+                tempDecryptedFile.delete();
+            }
         } catch (Exception ignored) {}
     }
 }

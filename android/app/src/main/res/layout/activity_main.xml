@@ -1,35 +1,85 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="16dp"
     android:background="@color/background">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="RAY AI - Offline LLM"
-        android:textSize="24sp"
-        android:textColor="@color/primary"
-        android:layout_gravity="center"
-        android:layout_marginBottom="32dp" />
-
-    <Button
-        android:id="@+id/btn_start"
+    <com.google.android.material.appbar.AppBarLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Start Chat"
-        android:background="@color/primary"
-        android:textColor="@color/white"
-        android:layout_marginBottom="16dp" />
+        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Offline AI Assistant"
-        android:textSize="16sp"
-        android:textColor="@color/text_secondary"
-        android:layout_gravity="center" />
+        <androidx.appcompat.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="@color/primary"
+            app:title="RAY AI Chat"
+            app:titleTextColor="@color/white"
+            app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
 
-</LinearLayout>
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+        <TextView
+            android:id="@+id/statusIndicator"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Model: Loading..."
+            android:textSize="12sp"
+            android:textColor="@color/text_secondary"
+            android:padding="8dp"
+            android:background="@color/gray_light"
+            android:drawableStart="@android:drawable/ic_menu_info_details"
+            android:drawablePadding="8dp" />
+
+        <!-- Chat Area -->
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/chatRecyclerView"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:padding="8dp"
+            android:clipToPadding="false" />
+
+        <!-- Input Area -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="8dp"
+            android:gravity="center_vertical"
+            android:background="@color/surface"
+            android:elevation="4dp">
+
+            <com.google.android.material.textfield.TextInputEditText
+                android:id="@+id/chatInput"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:hint="Type a message..."
+                android:padding="12dp"
+                android:background="@drawable/input_box_bg"
+                android:maxLines="4"
+                android:inputType="textShortMessage|textAutoCorrect|textMultiLine"
+                android:textColor="@color/text_primary"
+                android:textColorHint="@color/text_secondary" />
+
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:id="@+id/btnSend"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                app:srcCompat="@android:drawable/ic_menu_send"
+                app:backgroundTint="@color/primary"
+                app:tint="@color/white" />
+        </LinearLayout>
+    </LinearLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>
