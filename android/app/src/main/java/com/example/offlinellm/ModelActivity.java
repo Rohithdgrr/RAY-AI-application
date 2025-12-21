@@ -1,6 +1,5 @@
 package com.example.offlinellm;
 
-import android.content.Context;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -24,6 +23,12 @@ public class ModelActivity extends AppCompatActivity {
         binding = ActivityModelBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
+        setSupportActionBar(binding.modelToolbar);
+        if (getSupportActionBar() != null) {
+            getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        }
+        binding.modelToolbar.setNavigationOnClickListener(v -> finish());
+
         manager = ModelManager.getInstance(this);
         List<ModelManager.ModelInfo> models = manager.getModels();
 
@@ -38,10 +43,12 @@ public class ModelActivity extends AppCompatActivity {
                 TextView t1 = v.findViewById(android.R.id.text1);
                 TextView t2 = v.findViewById(android.R.id.text2);
                 
-                t1.setText(info.name + " (" + info.tier.label + ")");
+                t1.setText(info.name);
+                t1.setTextColor(getContext().getResources().getColor(R.color.primary));
+                
                 long ramNeeded = info.estimatedRamBytes / (1024L * 1024L);
                 String status = info.isDownloaded ? "Downloaded" : "Available to Download";
-                t2.setText(status + " | Est. RAM: " + ramNeeded + "MB");
+                t2.setText(info.tier.label + " | " + status + " | Est. RAM: " + ramNeeded + "MB");
                 
                 return v;
             }
@@ -51,10 +58,7 @@ public class ModelActivity extends AppCompatActivity {
         binding.modelListView.setOnItemClickListener((parent, view, position, id) -> {
             ModelManager.ModelInfo info = models.get(position);
             if (info.isDownloaded) {
-                // Return to MainActivity and load
-                Toast.makeText(this, "Loading " + info.name, Toast.LENGTH_SHORT).show();
-                // In a real app, use a listener or shared view model to trigger load in MainActivity
-                // For this example, we'll just show the Toast
+                Toast.makeText(this, "Model ready: " + info.name, Toast.LENGTH_SHORT).show();
                 finish();
             } else {
                 manager.downloadModel(info);

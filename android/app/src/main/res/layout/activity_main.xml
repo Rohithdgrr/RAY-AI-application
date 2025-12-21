@@ -1,91 +1,141 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:layout_width="match_edge"
-    android:layout_height="match_parent">
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/background"
+    tools:context=".MainActivity">
 
-    <TextView
-        android:id="@+id/statusText"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:background="#EEE"
-        android:padding="8dp"
-        android:text="@string/status_not_loaded"
-        android:textAlignment="center"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_top_toTopOf="parent" />
-
+    <!-- Header Area -->
     <LinearLayout
-        android:id="@+id/controlContainer"
+        android:id="@+id/header"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="4dp"
-        app:layout_constraintTop_toBottomOf="@+id/statusText">
-        
-        <HorizontalScrollView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content">
-            <RadioGroup
-                android:id="@+id/tierGroup"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:orientation="horizontal">
-                <RadioButton android:id="@+id/tierHigh" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="High" />
-                <RadioButton android:id="@+id/tierBalanced" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Balanced" android:checked="true" />
-                <RadioButton android:id="@+id/tierMedium" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Medium" />
-                <RadioButton android:id="@+id/tierLight" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Light" />
-                <RadioButton android:id="@+id/tierUltra" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Ultra" />
-            </RadioGroup>
-        </HorizontalScrollView>
+        android:padding="24dp"
+        android:gravity="center"
+        app:layout_constraintTop_toTopOf="parent">
 
-        <Switch
-            android:id="@+id/remoteFallbackSwitch"
+        <ImageView
+            android:layout_width="64dp"
+            android:layout_height="64dp"
+            android:src="@drawable/ic_ray_logo"
+            android:contentDescription="RAY AI Logo" />
+
+        <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Remote Fallback"
-            android:layout_gravity="end" />
+            android:text="RAY AI"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:textColor="@color/primary"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Your fast, offline intelligence"
+            android:textSize="14sp"
+            android:textColor="@color/text_secondary" />
     </LinearLayout>
 
+    <TextView
+        android:id="@+id/statusText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/status_not_loaded"
+        android:textSize="12sp"
+        android:textColor="@color/text_secondary"
+        android:background="@drawable/status_badge"
+        android:paddingHorizontal="12dp"
+        android:paddingVertical="4dp"
+        android:layout_marginTop="8dp"
+        app:layout_constraintTop_toBottomOf="@id/header"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_end_toEndOf="parent" />
+
+    <!-- Chat History -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/chatRecyclerView"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="0dp"
-        app:layout_constraintBottom_toTopOf="@+id/inputContainer"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_top_toBottomOf="@+id/controlContainer" />
+        android:layout_marginVertical="16dp"
+        app:layout_constraintTop_toBottomOf="@id/statusText"
+        app:layout_constraintBottom_toTopOf="@id/input_container" />
 
+    <!-- Input Area -->
     <LinearLayout
-        android:id="@+id/inputContainer"
+        android:id="@+id/input_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@android:color/white"
         android:orientation="horizontal"
-        android:padding="8dp"
+        android:padding="12dp"
+        android:background="@color/white"
+        android:elevation="4dp"
         app:layout_constraintBottom_toBottomOf="parent">
 
+        <ImageButton
+            android:id="@+id/modelButton"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:src="@android:drawable/ic_menu_manage"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Settings"
+            app:tint="@color/primary" />
+
         <EditText
-            android:id="@+id/promptEdit"
+            android:id="@+id/promptInput"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:hint="@string/prompt_hint"
-            app:layout_constraintStart_toStartOf="parent" />
-
-        <Button
-            android:id="@+id/sendBtn"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/send_button" />
+            android:background="@drawable/input_bg"
+            android:padding="12dp"
+            android:layout_marginHorizontal="8dp"
+            android:maxLines="4"
+            android:inputType="textMultiLine"
+            android:textSize="16sp" />
 
         <ImageButton
-            android:id="@+id/manageModelsBtn"
+            android:id="@+id/sendButton"
             android:layout_width="48dp"
             android:layout_height="48dp"
-            android:src="@android:drawable/ic_menu_manage"
-            android:contentDescription="@string/manage_models" />
+            android:src="@android:drawable/ic_menu_send"
+            android:background="@drawable/circle_button"
+            android:contentDescription="Send"
+            app:tint="@color/white" />
     </LinearLayout>
+
+    <!-- Overlay Chips for Quality -->
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/qualityChipGroup"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="16dp"
+        app:singleSelection="true"
+        app:layout_constraintBottom_toTopOf="@id/input_container"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_end_toEndOf="parent">
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipHigh"
+            style="@style/Widget.Material3.Chip.Choice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Best Quality" />
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipBalanced"
+            style="@style/Widget.Material3.Chip.Choice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Balanced"
+            android:checked="true" />
+        <com.google.android.material.chip.Chip
+            android:id="@+id/chipFast"
+            style="@style/Widget.Material3.Chip.Choice"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Fast" />
+    </com.google.android.material.chip.ChipGroup>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

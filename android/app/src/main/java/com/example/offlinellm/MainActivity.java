@@ -6,7 +6,9 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import android.view.MenuItem;
 import android.view.View;
+import android.widget.PopupMenu;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -41,24 +43,52 @@ public class MainActivity extends AppCompatActivity {
             startActivity(new Intent(this, ModelActivity.class));
         });
 
-        remoteEngine = new RemoteInference("YOUR_GROQ_API_KEY"); // User should set this
+        binding.menuBtn.setOnClickListener(this::showSettingsMenu);
 
-        binding.tierGroup.setOnCheckedChangeListener((group, checkedId) -> {
-            if (checkedId == R.id.tierHigh) currentPreference = ModelManager.Tier.HIGH_QUALITY;
-            else if (checkedId == R.id.tierBalanced) currentPreference = ModelManager.Tier.BALANCED;
-            else if (checkedId == R.id.tierMedium) currentPreference = ModelManager.Tier.MEDIUM;
-            else if (checkedId == R.id.tierLight) currentPreference = ModelManager.Tier.LIGHT;
-            else if (checkedId == R.id.tierUltra) currentPreference = ModelManager.Tier.ULTRA_LIGHT;
-            
-            loadBestModel(currentPreference);
-        });
+        remoteEngine = new RemoteInference("YOUR_GROQ_API_KEY"); 
 
-        binding.remoteFallbackSwitch.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            isRemoteFallbackEnabled = isChecked;
-        });
+        updateWelcomeVisibility();
         
         // Initial auto-load
         loadBestModel(currentPreference);
+    }
+
+    private void showSettingsMenu(View v) {
+        PopupMenu popup = new PopupMenu(this, v);
+        popup.getMenu().add(0, 1, 0, "Quality: High");
+        popup.getMenu().add(0, 2, 0, "Quality: Balanced");
+        popup.getMenu().add(0, 3, 0, "Quality: Medium");
+        popup.getMenu().add(0, 4, 0, "Quality: Light");
+        popup.getMenu().add(0, 5, 0, "Quality: Ultra Light");
+        
+        MenuItem remoteItem = popup.getMenu().add(0, 6, 0, "Remote Fallback: " + (isRemoteFallbackEnabled ? "ON" : "OFF"));
+
+        popup.setOnMenuItemClickListener(item -> {
+            switch (item.getItemId()) {
+                case 1: currentPreference = ModelManager.Tier.HIGH_QUALITY; break;
+                case 2: currentPreference = ModelManager.Tier.BALANCED; break;
+                case 3: currentPreference = ModelManager.Tier.MEDIUM; break;
+                case 4: currentPreference = ModelManager.Tier.LIGHT; break;
+                case 5: currentPreference = ModelManager.Tier.ULTRA_LIGHT; break;
+                case 6: 
+                    isRemoteFallbackEnabled = !isRemoteFallbackEnabled;
+                    Toast.makeText(this, "Remote Fallback: " + (isRemoteFallbackEnabled ? "Enabled" : "Disabled"), Toast.LENGTH_SHORT).show();
+                    return true;
+            }
+            loadBestModel(currentPreference);
+            return true;
+        });
+        popup.show();
+    }
+
+    private void updateWelcomeVisibility() {
+        if (messages.isEmpty()) {
+            binding.welcomeContainer.setVisibility(View.VISIBLE);
+            binding.chatRecyclerView.setVisibility(View.GONE);
+        } else {
+            binding.welcomeContainer.setVisibility(View.GONE);
+            binding.chatRecyclerView.setVisibility(View.VISIBLE);
+        }
     }
 
     private void loadBestModel(ModelManager.Tier preference) {
@@ -67,7 +97,7 @@ public class MainActivity extends AppCompatActivity {
         if (info != null) {
             loadModel(info);
         } else {
-            mainHandler.post(() -> binding.statusText.setText("No local models found. Use Manage Models to download."));
+            mainHandler.post(() -> binding.statusText.setText("RAY AI Status: Ready (No local model)"));
         }
     }
 
@@ -78,11 +108,13 @@ public class MainActivity extends AppCompatActivity {
         messages.add(new ChatMessage("You", prompt));
         adapter.notifyItemInserted(messages.size() - 1);
         binding.promptEdit.setText("");
+        updateWelcomeVisibility();
 
         ChatMessage assistantMsg = new ChatMessage("AI", "");
         messages.add(assistantMsg);
         int assistPos = messages.size() - 1;
         adapter.notifyItemInserted(assistPos);
+        binding.chatRecyclerView.scrollToPosition(assistPos);
 
         if (engine == null || !engine.isLoaded()) {
             if (isRemoteFallbackEnabled) {
@@ -147,15 +179,14 @@ public class MainActivity extends AppCompatActivity {
     public void loadModel(ModelManager.ModelInfo info) {
         new Thread(() -> {
             try {
-                mainHandler.post(() -> binding.statusText.setText("Loading: " + info.name + "..."));
+                mainHandler.post(() -> binding.statusText.setText("Status: Loading " + info.name + "..."));
 
                 File encryptedFile = new File(getFilesDir(), info.fileName);
                 File tempDecrypted = new File(getCacheDir(), "m.tmp");
 
-                // Memory Preflight
                 if (!ModelManager.getInstance(this).canLoadModel(info)) {
                     mainHandler.post(() -> {
-                        Toast.makeText(this, "RAM too low for " + info.tier.label + ". Trying fallback...", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(this, "Memory too low for " + info.tier.label, Toast.LENGTH_SHORT).show();
                         tryFallback(info.tier);
                     });
                     return;
@@ -163,7 +194,8 @@ public class MainActivity extends AppCompatActivity {
 
                 SecurityHelper.decryptFile(this, encryptedFile, tempDecrypted);
                 
-                // Detection
+                if (engine != null) engine.unload();
+                
                 if (info.fileName.endsWith(".onnx.enc")) {
                     engine = new OnnxInference();
                 } else {
@@ -173,7 +205,7 @@ public class MainActivity extends AppCompatActivity {
                 engine.loadModel(tempDecrypted);
                 tempDecrypted.delete();
 
-                mainHandler.post(() -> binding.statusText.setText("Status: Loaded (" + info.tier.label + ")"));
+                mainHandler.post(() -> binding.statusText.setText("RAY AI Status: Active (" + info.tier.label + ")"));
             } catch (Exception e) {
                 Log.e("MainActivity", "Load failed", e);
                 mainHandler.post(() -> tryFallback(info.tier));
@@ -183,7 +215,6 @@ public class MainActivity extends AppCompatActivity {
 
     private void tryFallback(ModelManager.Tier failedTier) {
         ModelManager mm = ModelManager.getInstance(this);
-        // Find next lower tier
         int nextIdx = failedTier.ordinal() + 1;
         if (nextIdx < ModelManager.Tier.values().length) {
             ModelManager.Tier nextTier = ModelManager.Tier.values()[nextIdx];
@@ -193,11 +224,7 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
         }
-        
-        mainHandler.post(() -> {
-            binding.statusText.setText("Status: Not loaded (All local fallbacks failed)");
-            Toast.makeText(this, "Local load failed. Enable Remote Fallback for cloud support.", Toast.LENGTH_LONG).show();
-        });
+        mainHandler.post(() -> binding.statusText.setText("RAY AI Status: Fallback failed"));
     }
 
     @Override

@@ -1,11 +1,13 @@
 package com.example.offlinellm;
 
-import android.content.Context;
+import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
+import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.RecyclerView;
 import java.util.List;
 
@@ -28,6 +30,19 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
         ChatMessage message = messages.get(position);
         holder.sender.setText(message.getSender());
         holder.text.setText(message.getText());
+
+        ConstraintLayout.LayoutParams params = (ConstraintLayout.LayoutParams) holder.bubbleLayout.getLayoutParams();
+        
+        if (message.getSender().equalsIgnoreCase("You")) {
+            params.horizontalBias = 1.0f;
+            holder.bubbleLayout.setBackgroundResource(R.drawable.bubble_user);
+            holder.sender.setVisibility(View.GONE);
+        } else {
+            params.horizontalBias = 0.0f;
+            holder.bubbleLayout.setBackgroundResource(R.drawable.bubble_ai);
+            holder.sender.setVisibility(View.VISIBLE);
+        }
+        holder.bubbleLayout.setLayoutParams(params);
     }
 
     @Override
@@ -35,10 +50,12 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView sender, text;
+        LinearLayout bubbleLayout;
         ViewHolder(View view) {
             super(view);
             sender = view.findViewById(R.id.messageSender);
             text = view.findViewById(R.id.messageText);
+            bubbleLayout = view.findViewById(R.id.bubbleLayout);
         }
     }
 }
