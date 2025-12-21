@@ -90,7 +90,6 @@ public class ModelBottomSheet extends BottomSheetDialogFragment {
             TextView name, tier;
             Button btnDownload, btnUse;
             ProgressBar progress;
-            ImageButton btnPauseResume;
 
             public ViewHolder(@NonNull View itemView) {
                 super(itemView);
@@ -99,7 +98,6 @@ public class ModelBottomSheet extends BottomSheetDialogFragment {
                 btnDownload = itemView.findViewById(R.id.btnDownload);
                 btnUse = itemView.findViewById(R.id.btnUse);
                 progress = itemView.findViewById(R.id.modelProgress);
-                btnPauseResume = itemView.findViewById(R.id.btnPauseResume);
             }
         }
     }

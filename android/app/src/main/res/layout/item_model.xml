@@ -1,81 +1,174 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="vertical"
-    android:padding="12dp"
-    android:layout_marginBottom="8dp"
-    android:background="@drawable/edit_text_bg">
+    android:layout_margin="8dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="4dp"
+    app:cardBackgroundColor="@color/surface">
 
-    <TextView
-        android:id="@+id/modelName"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Model Name"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:textColor="@color/text_primary" />
-
-    <TextView
-        android:id="@+id/modelTier"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:text="Tier: Balanced"
-        android:textSize="12sp"
-        android:textColor="@color/text_secondary" />
-
-    <RelativeLayout
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp">
+        android:orientation="vertical"
+        android:padding="16dp">
 
+        <!-- Header with name and tier badge -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/modelName"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Model Name"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:textColor="@color/text_primary" />
+
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/tierBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Balanced"
+                    android:textSize="12sp"
+                    android:textColor="@color/white"
+                    app:chipBackgroundColor="@color/primary"
+                    app:chipCornerRadius="8dp" />
+            </LinearLayout>
+
+            <!-- Status indicator -->
+            <ImageView
+                android:id="@+id/statusIcon"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginStart="8dp"
+                android:src="@android:drawable/ic_menu_save"
+                android:tint="@color/primary"
+                android:visibility="gone" />
+        </LinearLayout>
+
+        <!-- Model specifications -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="12dp"
+            android:gravity="center_vertical">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Memory Required"
+                    android:textSize="12sp"
+                    android:textColor="@color/text_secondary" />
+
+                <TextView
+                    android:id="@+id/modelTier"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Est. RAM: 512MB"
+                    android:textSize="14sp"
+                    android:textColor="@color/text_primary"
+                    android:layout_marginTop="2dp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="File Size"
+                    android:textSize="12sp"
+                    android:textColor="@color/text_secondary" />
+
+                <TextView
+                    android:id="@+id/modelSize"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="~2.3 GB"
+                    android:textSize="14sp"
+                    android:textColor="@color/text_primary"
+                    android:layout_marginTop="2dp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Progress bar for download -->
         <ProgressBar
             android:id="@+id/modelProgress"
             style="?android:attr/progressBarStyleHorizontal"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:visibility="gone"
-            android:layout_alignParentStart="true"
-            android:layout_toStartOf="@+id/actionContainer"
-            android:layout_centerVertical="true" />
+            android:layout_marginTop="12dp"
+            android:progressTint="@color/primary"
+            android:progress="0" />
 
-        <LinearLayout
-            android:id="@+id/actionContainer"
-            android:layout_width="wrap_content"
+        <TextView
+            android:id="@+id/downloadStatus"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_alignParentEnd="true"
-            android:orientation="horizontal">
+            android:text="Downloading: 45%"
+            android:textSize="12sp"
+            android:textColor="@color/text_secondary"
+            android:visibility="gone"
+            android:layout_marginTop="4dp"
+            android:gravity="center" />
 
-            <Button
+        <!-- Action buttons -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="12dp"
+            android:gravity="end"
+            android:spacing="8dp">
+
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnDownload"
-                style="?android:attr/buttonStyleSmall"
+                style="@style/Widget.MaterialComponents.Button"
                 android:layout_width="wrap_content"
-                android:layout_height="32dp"
+                android:layout_height="wrap_content"
                 android:text="Download"
-                android:textSize="10sp"
-                android:backgroundTint="@color/primary"
-                android:textColor="@color/white" />
+                android:textSize="14sp"
+                app:backgroundTint="@color/primary"
+                app:cornerRadius="8dp" />
 
-            <Button
+            <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnUse"
-                style="?android:attr/buttonStyleSmall"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
                 android:layout_width="wrap_content"
-                android:layout_height="32dp"
+                android:layout_height="wrap_content"
                 android:text="Use"
                 android:visibility="gone"
-                android:textSize="10sp"
-                android:backgroundTint="@color/secondary"
-                android:textColor="@color/white" />
-            
-            <ImageButton
-                android:id="@+id/btnPauseResume"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
-                android:visibility="gone"
-                android:background="?attr/selectableItemBackground"
-                android:src="@android:drawable/ic_media_pause" />
+                android:layout_marginStart="8dp"
+                android:textSize="14sp"
+                app:strokeColor="@color/primary"
+                app:cornerRadius="8dp" />
 
         </LinearLayout>
-    </RelativeLayout>
 
-</LinearLayout>
+    </LinearLayout>
+
+</androidx.cardview.widget.CardView>
