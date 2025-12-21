@@ -38,8 +38,10 @@ public class ModelActivity extends AppCompatActivity {
                 TextView t1 = v.findViewById(android.R.id.text1);
                 TextView t2 = v.findViewById(android.R.id.text2);
                 
-                t1.setText(info.name);
-                t2.setText(info.isDownloaded ? "Downloaded (Encrypted)" : "Available to Download");
+                t1.setText(info.name + " (" + info.tier.label + ")");
+                long ramNeeded = info.estimatedRamBytes / (1024L * 1024L);
+                String status = info.isDownloaded ? "Downloaded" : "Available to Download";
+                t2.setText(status + " | Est. RAM: " + ramNeeded + "MB");
                 
                 return v;
             }

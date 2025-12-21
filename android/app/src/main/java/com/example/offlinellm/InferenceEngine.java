@@ -12,4 +12,5 @@ public interface InferenceEngine {
     void loadModel(File modelFile) throws Exception;
     void generate(String prompt, Callback callback);
     void unload();
+    boolean isLoaded();
 }

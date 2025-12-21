@@ -43,6 +43,11 @@ public class LlamaInference implements InferenceEngine {
         }
     }
 
+    @Override
+    public boolean isLoaded() {
+        return contextPointer != 0;
+    }
+
     // JNI Methods
     private native long nativeInit(String modelPath);
     private native void nativeGenerate(long ptr, String prompt, NativeCallback cb);

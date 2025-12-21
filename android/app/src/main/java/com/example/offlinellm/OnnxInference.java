@@ -35,6 +35,11 @@ public class OnnxInference implements InferenceEngine {
     }
 
     @Override
+    public boolean isLoaded() {
+        return session != null;
+    }
+
+    @Override
     public void unload() {
         try {
             if (session != null) session.close();
