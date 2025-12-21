@@ -1,211 +1,25 @@
 package com.example.offlinellm;
 
-import android.app.ActivityManager;
 import android.content.Intent;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
-import android.util.Log;
-import android.view.MenuItem;
 import android.view.View;
-import android.widget.PopupMenu;
-import android.widget.Toast;
+import android.widget.Button;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import com.example.offlinellm.databinding.ActivityMainBinding;
-import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
-    private ActivityMainBinding binding;
-    private ChatAdapter adapter;
-    private List<ChatMessage> messages = new ArrayList<>();
-    private InferenceEngine engine;
-    private final Handler mainHandler = new Handler(Looper.getMainLooper());
-
-    private ModelManager.Tier currentPreference = ModelManager.Tier.BALANCED;
-    private boolean isRemoteFallbackEnabled = false;
-    private RemoteInference remoteEngine;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        binding = ActivityMainBinding.inflate(getLayoutInflater());
-        setContentView(binding.getRoot());
+        setContentView(R.layout.activity_main);
 
-        adapter = new ChatAdapter(messages);
-        binding.chatRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-        binding.chatRecyclerView.setAdapter(adapter);
-
-        binding.sendButton.setOnClickListener(v -> sendMessage());
-        binding.modelButton.setOnClickListener(v -> {
-            startActivity(new Intent(this, ModelActivity.class));
-        });
-
-        setupQualityChips();
-
-        remoteEngine = new RemoteInference("YOUR_GROQ_API_KEY"); 
-        
-        // Initial auto-load
-        loadBestModel(currentPreference);
-    }
-
-    private void setupQualityChips() {
-        binding.qualityChipGroup.setOnCheckedChangeListener((group, checkedId) -> {
-            if (checkedId == binding.chipHigh.getId()) {
-                currentPreference = ModelManager.Tier.HIGH_QUALITY;
-            } else if (checkedId == binding.chipBalanced.getId()) {
-                currentPreference = ModelManager.Tier.BALANCED;
-            } else if (checkedId == binding.chipFast.getId()) {
-                currentPreference = ModelManager.Tier.ULTRA_LIGHT;
-            }
-            loadBestModel(currentPreference);
-        });
-    }
-
-    private void updateWelcomeVisibility() {
-        // Handled by RecyclerView visibility in this simplified layout
-    }
-
-    private void loadBestModel(ModelManager.Tier preference) {
-        ModelManager mm = ModelManager.getInstance(this);
-        ModelManager.ModelInfo info = mm.getBestDownloadedModel(preference);
-        if (info != null) {
-            loadModel(info);
-        } else {
-            mainHandler.post(() -> binding.statusText.setText("RAY AI Status: Ready"));
-        }
-    }
-
-    private void sendMessage() {
-        String prompt = binding.promptInput.getText().toString().trim();
-        if (prompt.isEmpty()) return;
-
-        messages.add(new ChatMessage("You", prompt));
-        adapter.notifyItemInserted(messages.size() - 1);
-        binding.promptInput.setText("");
-
-        ChatMessage assistantMsg = new ChatMessage("AI", "");
-        messages.add(assistantMsg);
-        int assistPos = messages.size() - 1;
-        adapter.notifyItemInserted(assistPos);
-        binding.chatRecyclerView.scrollToPosition(assistPos);
-
-        if (engine == null || !engine.isLoaded()) {
-            if (isRemoteFallbackEnabled) {
-                mainHandler.post(() -> assistantMsg.setText("Local model not loaded. Using Remote Fallback..."));
-                callRemoteFallback(prompt, assistantMsg, assistPos);
-            } else {
-                assistantMsg.setText("Error: Local engine not loaded and Remote Fallback disabled.");
-                adapter.notifyItemChanged(assistPos);
-            }
-            return;
-        }
-
-        engine.generate(prompt, new InferenceEngine.Callback() {
+        Button btnStart = findViewById(R.id.btn_start);
+        btnStart.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onToken(String token) {
-                mainHandler.post(() -> {
-                    assistantMsg.setText(assistantMsg.getText() + token);
-                    adapter.notifyItemChanged(assistPos);
-                    binding.chatRecyclerView.scrollToPosition(assistPos);
-                });
-            }
-
-            @Override
-            public void onComplete() {
-                Log.d("MainActivity", "Generation complete");
-            }
-
-            @Override
-            public void onError(String message) {
-                mainHandler.post(() -> {
-                    if (isRemoteFallbackEnabled) {
-                        Toast.makeText(MainActivity.this, "Local error, falling back to remote...", Toast.LENGTH_SHORT).show();
-                        callRemoteFallback(prompt, assistantMsg, assistPos);
-                    } else {
-                        Toast.makeText(MainActivity.this, message, Toast.LENGTH_SHORT).show();
-                    }
-                });
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, ChatActivity.class);
+                startActivity(intent);
             }
         });
-    }
-
-    private void callRemoteFallback(String prompt, ChatMessage msg, int pos) {
-        remoteEngine.generate(prompt, new RemoteInference.RemoteCallback() {
-            @Override
-            public void onToken(String token) {
-                mainHandler.post(() -> {
-                    msg.setText(token);
-                    adapter.notifyItemChanged(pos);
-                });
-            }
-
-            @Override
-            public void onError(String error) {
-                mainHandler.post(() -> {
-                    msg.setText("Remote Fallback failed: " + error);
-                    adapter.notifyItemChanged(pos);
-                });
-            }
-        });
-    }
-
-    public void loadModel(ModelManager.ModelInfo info) {
-        new Thread(() -> {
-            try {
-                mainHandler.post(() -> binding.statusText.setText("Status: Loading " + info.name + "..."));
-
-                File encryptedFile = new File(getFilesDir(), info.fileName);
-                File tempDecrypted = new File(getCacheDir(), "m.tmp");
-
-                if (!ModelManager.getInstance(this).canLoadModel(info)) {
-                    mainHandler.post(() -> {
-                        Toast.makeText(this, "Memory too low for " + info.tier.label, Toast.LENGTH_SHORT).show();
-                        tryFallback(info.tier);
-                    });
-                    return;
-                }
-
-                SecurityHelper.decryptFile(this, encryptedFile, tempDecrypted);
-                
-                if (engine != null) engine.unload();
-                
-                if (info.fileName.endsWith(".onnx.enc")) {
-                    engine = new OnnxInference();
-                } else {
-                    engine = new LlamaInference();
-                }
-
-                engine.loadModel(tempDecrypted);
-                tempDecrypted.delete();
-
-                mainHandler.post(() -> binding.statusText.setText("RAY AI Status: Active (" + info.tier.label + ")"));
-            } catch (Exception e) {
-                Log.e("MainActivity", "Load failed", e);
-                mainHandler.post(() -> tryFallback(info.tier));
-            }
-        }).start();
-    }
-
-    private void tryFallback(ModelManager.Tier failedTier) {
-        ModelManager mm = ModelManager.getInstance(this);
-        int nextIdx = failedTier.ordinal() + 1;
-        if (nextIdx < ModelManager.Tier.values().length) {
-            ModelManager.Tier nextTier = ModelManager.Tier.values()[nextIdx];
-            ModelManager.ModelInfo nextInfo = mm.getBestDownloadedModel(nextTier);
-            if (nextInfo != null) {
-                loadModel(nextInfo);
-                return;
-            }
-        }
-        mainHandler.post(() -> binding.statusText.setText("RAY AI Status: Fallback failed"));
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        if (engine != null) engine.unload();
     }
 }

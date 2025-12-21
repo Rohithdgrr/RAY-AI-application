@@ -5,13 +5,19 @@ project("offlinellm")
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 
-# Note: In a production app, llama.cpp would be added as a subdirectory
-# add_subdirectory(llama.cpp)
+# Add llama.cpp as subdirectory
+add_subdirectory(llama.cpp)
 
 add_library(
         llama-jni
         SHARED
         native-lib.cpp
+)
+
+# Include llama.cpp headers
+target_include_directories(llama-jni PRIVATE 
+    ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/llama.cpp
 )
 
 find_library(
@@ -21,6 +27,6 @@ find_library(
 
 target_link_libraries(
         llama-jni
-        # llama (link against llama.cpp library)
+        llama
         ${log-lib}
 )

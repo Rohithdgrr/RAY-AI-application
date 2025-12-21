@@ -24,13 +24,9 @@
             </intent-filter>
         </activity>
 
-        <activity android:name=".ModelActivity" />
-
-        <receiver android:name=".DownloadReceiver" android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.DOWNLOAD_COMPLETE" />
-            </intent-filter>
-        </receiver>
+        <activity
+            android:name=".ChatActivity"
+            android:exported="false" />
 
     </application>
 

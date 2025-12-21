@@ -1,141 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/background"
-    tools:context=".MainActivity">
-
-    <!-- Header Area -->
-    <LinearLayout
-        android:id="@+id/header"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="24dp"
-        android:gravity="center"
-        app:layout_constraintTop_toTopOf="parent">
-
-        <ImageView
-            android:layout_width="64dp"
-            android:layout_height="64dp"
-            android:src="@drawable/ic_ray_logo"
-            android:contentDescription="RAY AI Logo" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="RAY AI"
-            android:textSize="28sp"
-            android:textStyle="bold"
-            android:textColor="@color/primary"
-            android:layout_marginTop="8dp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Your fast, offline intelligence"
-            android:textSize="14sp"
-            android:textColor="@color/text_secondary" />
-    </LinearLayout>
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:background="@color/background">
 
     <TextView
-        android:id="@+id/statusText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/status_not_loaded"
-        android:textSize="12sp"
+        android:text="RAY AI - Offline LLM"
+        android:textSize="24sp"
+        android:textColor="@color/primary"
+        android:layout_gravity="center"
+        android:layout_marginBottom="32dp" />
+
+    <Button
+        android:id="@+id/btn_start"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Start Chat"
+        android:background="@color/primary"
+        android:textColor="@color/white"
+        android:layout_marginBottom="16dp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Offline AI Assistant"
+        android:textSize="16sp"
         android:textColor="@color/text_secondary"
-        android:background="@drawable/status_badge"
-        android:paddingHorizontal="12dp"
-        android:paddingVertical="4dp"
-        android:layout_marginTop="8dp"
-        app:layout_constraintTop_toBottomOf="@id/header"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_end_toEndOf="parent" />
+        android:layout_gravity="center" />
 
-    <!-- Chat History -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/chatRecyclerView"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_marginVertical="16dp"
-        app:layout_constraintTop_toBottomOf="@id/statusText"
-        app:layout_constraintBottom_toTopOf="@id/input_container" />
-
-    <!-- Input Area -->
-    <LinearLayout
-        android:id="@+id/input_container"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:padding="12dp"
-        android:background="@color/white"
-        android:elevation="4dp"
-        app:layout_constraintBottom_toBottomOf="parent">
-
-        <ImageButton
-            android:id="@+id/modelButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:src="@android:drawable/ic_menu_manage"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Settings"
-            app:tint="@color/primary" />
-
-        <EditText
-            android:id="@+id/promptInput"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:hint="@string/prompt_hint"
-            android:background="@drawable/input_bg"
-            android:padding="12dp"
-            android:layout_marginHorizontal="8dp"
-            android:maxLines="4"
-            android:inputType="textMultiLine"
-            android:textSize="16sp" />
-
-        <ImageButton
-            android:id="@+id/sendButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:src="@android:drawable/ic_menu_send"
-            android:background="@drawable/circle_button"
-            android:contentDescription="Send"
-            app:tint="@color/white" />
-    </LinearLayout>
-
-    <!-- Overlay Chips for Quality -->
-    <com.google.android.material.chip.ChipGroup
-        android:id="@+id/qualityChipGroup"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="16dp"
-        app:singleSelection="true"
-        app:layout_constraintBottom_toTopOf="@id/input_container"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_end_toEndOf="parent">
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipHigh"
-            style="@style/Widget.Material3.Chip.Choice"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Best Quality" />
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipBalanced"
-            style="@style/Widget.Material3.Chip.Choice"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Balanced"
-            android:checked="true" />
-        <com.google.android.material.chip.Chip
-            android:id="@+id/chipFast"
-            style="@style/Widget.Material3.Chip.Choice"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Fast" />
-    </com.google.android.material.chip.ChipGroup>
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+</LinearLayout>

@@ -36,3 +36,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+android/.gradle/
+android/**/.gradle/
+android/app/build/
+android/**/build/
+android/local.properties
+android/gradle-8.4/
+android/gradle-8.4-bin.zip
+android/app/*.keystore
