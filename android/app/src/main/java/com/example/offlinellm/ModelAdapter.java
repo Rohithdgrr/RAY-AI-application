@@ -44,6 +44,11 @@ public class ModelAdapter extends RecyclerView.Adapter<ModelAdapter.ViewHolder> 
         holder.modelSize.setText("~" + String.format("%.1f", model.estimatedRamBytes / (1024.0 * 1024.0 * 1024.0)) + " GB");
         holder.tierBadge.setText(model.tier.label);
 
+        // Verification check
+        if (!model.isDownloaded) {
+            model.isDownloaded = manager.isModelAvailableOnDevice(model.fileName);
+        }
+
         if (model.isDownloaded) {
             holder.btnDownload.setVisibility(View.GONE);
             holder.btnUse.setVisibility(View.VISIBLE);
@@ -54,8 +59,20 @@ public class ModelAdapter extends RecyclerView.Adapter<ModelAdapter.ViewHolder> 
             holder.btnUse.setOnClickListener(v -> {
                 if (listener != null) listener.onModelSelected(model);
             });
+        } else if (model.isDownloading) {
+            holder.btnDownload.setVisibility(View.GONE);
+            holder.btnUse.setVisibility(View.GONE);
+            holder.statusIcon.setVisibility(View.GONE);
+            holder.modelProgress.setVisibility(View.VISIBLE);
+            holder.downloadStatus.setVisibility(View.VISIBLE);
+            
+            holder.modelProgress.setProgress(model.downloadProgress);
+            holder.downloadStatus.setText("Downloading: " + model.downloadProgress + "%");
         } else {
             holder.btnDownload.setVisibility(View.VISIBLE);
+            holder.btnDownload.setText("Download");
+            holder.btnDownload.setEnabled(true);
+            holder.btnDownload.setAlpha(1.0f);
             holder.btnUse.setVisibility(View.GONE);
             holder.statusIcon.setVisibility(View.GONE);
             holder.modelProgress.setVisibility(View.GONE);
@@ -63,9 +80,7 @@ public class ModelAdapter extends RecyclerView.Adapter<ModelAdapter.ViewHolder> 
             
             holder.btnDownload.setOnClickListener(v -> {
                 manager.downloadModel(model);
-                Toast.makeText(holder.itemView.getContext(), "Download started: " + model.name, Toast.LENGTH_SHORT).show();
-                holder.btnDownload.setEnabled(false);
-                holder.btnDownload.setAlpha(0.5f);
+                notifyItemChanged(position);
             });
         }
     }

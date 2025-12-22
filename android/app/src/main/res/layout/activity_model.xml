@@ -14,7 +14,20 @@
         app:title="Download Models"
         app:titleTextColor="@color/white"
         app:navigationIcon="@android:drawable/ic_menu_revert"
-        app:navigationIconTint="@color/white" />
+        app:navigationIconTint="@color/white">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnHFImport"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:text="HF Import"
+            android:textColor="@color/white"
+            app:icon="@android:drawable/ic_menu_add"
+            app:iconTint="@color/white" />
+
+    </androidx.appcompat.widget.Toolbar>
 
     <!-- Search and Filter Section -->
     <LinearLayout

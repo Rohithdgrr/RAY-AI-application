@@ -5,81 +5,146 @@
     android:layout_height="match_parent"
     android:background="@color/background">
 
-    <com.google.android.material.appbar.AppBarLayout
-        android:layout_width="match_parent"
+    <!-- Dynamic Island Navbar -->
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/dynamic_island"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:theme="@style/ThemeOverlay.AppCompat.Dark.ActionBar">
+        android:layout_marginTop="8dp"
+        android:layout_gravity="center_horizontal"
+        app:cardCornerRadius="24dp"
+        app:cardElevation="8dp"
+        app:cardBackgroundColor="#000000">
 
-        <androidx.appcompat.widget.Toolbar
-            android:id="@+id/toolbar"
-            android:layout_width="match_parent"
-            android:layout_height="?attr/actionBarSize"
-            android:background="@color/primary"
-            app:title="RAY AI Chat"
-            app:titleTextColor="@color/white"
-            app:popupTheme="@style/ThemeOverlay.AppCompat.Light" />
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingHorizontal="20dp"
+            android:paddingVertical="10dp"
+            android:gravity="center_vertical">
 
-    </com.google.android.material.appbar.AppBarLayout>
+            <ImageView
+                android:id="@+id/btnHistory"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@android:drawable/ic_menu_recent_history"
+                android:tint="@color/white"
+                android:layout_marginEnd="12dp" />
 
-    <LinearLayout
+            <TextView
+                android:id="@+id/modelNameDisplay"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="RAY AI"
+                android:textSize="14sp"
+                android:textColor="@color/white"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/modelStatusDot"
+                android:layout_width="8dp"
+                android:layout_height="8dp"
+                android:layout_marginStart="8dp"
+                android:background="@drawable/status_dot"
+                android:backgroundTint="@color/success" />
+
+            <ImageView
+                android:id="@+id/btnModels"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:src="@android:drawable/ic_menu_manage"
+                android:tint="@color/white"
+                android:layout_marginStart="12dp" />
+
+        </LinearLayout>
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <TextView
+        android:id="@+id/statusIndicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"
+        android:layout_marginTop="60dp"
+        android:text="Model: Loading..."
+        android:textSize="12sp"
+        android:textColor="@color/text_secondary"
+        android:visibility="gone" />
+
+    <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:orientation="vertical"
-        app:layout_behavior="@string/appbar_scrolling_view_behavior">
-
-        <TextView
-            android:id="@+id/statusIndicator"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Model: Loading..."
-            android:textSize="12sp"
-            android:textColor="@color/text_secondary"
-            android:padding="8dp"
-            android:background="@color/gray_light"
-            android:drawableStart="@android:drawable/ic_menu_info_details"
-            android:drawablePadding="8dp" />
+        android:layout_marginTop="40dp">
 
         <!-- Chat Area -->
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/chatRecyclerView"
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
             android:padding="8dp"
-            android:clipToPadding="false" />
+            android:clipToPadding="false"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toTopOf="@id/inputCard"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent" />
 
-        <!-- Input Area -->
-        <LinearLayout
+        <!-- Input Card -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/inputCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="horizontal"
-            android:padding="8dp"
-            android:gravity="center_vertical"
-            android:background="@color/surface"
-            android:elevation="4dp">
+            android:layout_margin="8dp"
+            app:cardCornerRadius="4dp"
+            app:cardElevation="4dp"
+            app:cardBackgroundColor="@color/surface"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
 
-            <com.google.android.material.textfield.TextInputEditText
-                android:id="@+id/chatInput"
-                android:layout_width="0dp"
+            <LinearLayout
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:hint="Type a message..."
+                android:orientation="horizontal"
                 android:padding="12dp"
-                android:background="@drawable/input_box_bg"
-                android:maxLines="4"
-                android:inputType="textShortMessage|textAutoCorrect|textMultiLine"
-                android:textColor="@color/text_primary"
-                android:textColorHint="@color/text_secondary" />
+                android:gravity="center_vertical">
 
-            <com.google.android.material.floatingactionbutton.FloatingActionButton
-                android:id="@+id/btnSend"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
-                app:srcCompat="@android:drawable/ic_menu_send"
-                app:backgroundTint="@color/primary"
-                app:tint="@color/white" />
-        </LinearLayout>
-    </LinearLayout>
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/chatInput"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:hint="@string/prompt_hint"
+                    android:padding="12dp"
+                    android:background="@android:color/transparent"
+                    android:maxLines="4"
+                    android:inputType="textShortMessage|textAutoCorrect|textMultiLine"
+                    android:textColor="@color/text_primary"
+                    android:textColorHint="@color/text_secondary"
+                    android:textSize="16sp" />
+
+                <com.google.android.material.floatingactionbutton.FloatingActionButton
+                    android:id="@+id/btnSend"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    app:srcCompat="@android:drawable/ic_menu_send"
+                    app:backgroundTint="@color/primary"
+                    app:tint="@color/white"
+                    app:elevation="2dp"
+                    app:fabSize="mini" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- Regular Toolbar (hidden but needed for menu) -->
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:visibility="gone" />
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

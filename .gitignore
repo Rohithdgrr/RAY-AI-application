@@ -41,6 +41,14 @@ android/.gradle/
 android/**/.gradle/
 android/app/build/
 android/**/build/
+android/app/.cxx/
+android/**/.cxx/
+android/.cxx/
+*.ninja
+.ninja_deps
+.ninja_log
+*.o
+*.so
 android/local.properties
 android/gradle-8.4/
 android/gradle-8.4-bin.zip

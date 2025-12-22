@@ -14,7 +14,7 @@ import com.example.offlinellm.databinding.ActivityModelBinding;
 import java.util.ArrayList;
 import java.util.List;
 
-public class ModelActivity extends AppCompatActivity implements ModelAdapter.OnModelActionListener {
+public class ModelActivity extends AppCompatActivity implements ModelAdapter.OnModelActionListener, ModelManager.DownloadProgressListener {
     private ActivityModelBinding binding;
     private ModelManager manager;
     private ModelAdapter adapter;
@@ -36,6 +36,7 @@ public class ModelActivity extends AppCompatActivity implements ModelAdapter.OnM
         binding.modelToolbar.setNavigationOnClickListener(v -> finish());
 
         manager = ModelManager.getInstance(this);
+        manager.addProgressListener(this);
         allModels = new ArrayList<>(manager.getModels());
         filteredModels = new ArrayList<>(allModels);
 
@@ -72,6 +73,99 @@ public class ModelActivity extends AppCompatActivity implements ModelAdapter.OnM
             }
             
             applyFilters();
+        });
+
+        binding.btnHFImport.setOnClickListener(v -> showHFImportDialog());
+    }
+
+    private void showHFImportDialog() {
+        android.widget.EditText input = new android.widget.EditText(this);
+        input.setHint("https://huggingface.co/.../resolve/main/model.gguf");
+        input.setPadding(40, 40, 40, 40);
+
+        new androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("Import from Hugging Face")
+                .setMessage("Enter the direct GGUF download URL:")
+                .setView(input)
+                .setPositiveButton("Download", (dialog, which) -> {
+                    String url = input.getText().toString().trim();
+                    if (!url.isEmpty()) {
+                        importCustomModel(url);
+                    }
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void importCustomModel(String url) {
+        // Extract filename from URL
+        String fileName = url.substring(url.lastIndexOf('/') + 1);
+        if (!fileName.endsWith(".gguf")) {
+            fileName += ".gguf";
+        }
+        
+        ModelManager.ModelInfo customModel = new ModelManager.ModelInfo(
+                "HF: " + fileName,
+                url,
+                fileName + ".enc",
+                "PLACEHOLDER",
+                ModelManager.Tier.BALANCED,
+                4000L * 1024L * 1024L
+        );
+        
+        manager.getModels().add(customModel);
+        allModels.add(customModel);
+        manager.downloadModel(customModel, url);
+        applyFilters();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (manager != null) {
+            manager.removeProgressListener(this);
+        }
+    }
+
+    @Override
+    public void onDownloadProgress(ModelManager.ModelInfo model, int progress, long downloadedBytes, long totalBytes) {
+        runOnUiThread(() -> {
+            int index = filteredModels.indexOf(model);
+            if (index != -1) {
+                adapter.notifyItemChanged(index);
+            }
+        });
+    }
+
+    @Override
+    public void onDownloadStarted(ModelManager.ModelInfo model) {
+        runOnUiThread(() -> {
+            int index = filteredModels.indexOf(model);
+            if (index != -1) {
+                adapter.notifyItemChanged(index);
+            }
+        });
+    }
+
+    @Override
+    public void onDownloadCompleted(ModelManager.ModelInfo model) {
+        runOnUiThread(() -> {
+            int index = filteredModels.indexOf(model);
+            if (index != -1) {
+                adapter.notifyItemChanged(index);
+            }
+            android.widget.Toast.makeText(this, "Download complete: " + model.name, android.widget.Toast.LENGTH_SHORT).show();
+        });
+    }
+
+    @Override
+    public void onDownloadFailed(ModelManager.ModelInfo model, String error) {
+        runOnUiThread(() -> {
+            int index = filteredModels.indexOf(model);
+            if (index != -1) {
+                adapter.notifyItemChanged(index);
+            }
+            android.widget.Toast.makeText(this, "Download failed: " + error, android.widget.Toast.LENGTH_LONG).show();
         });
     }
 

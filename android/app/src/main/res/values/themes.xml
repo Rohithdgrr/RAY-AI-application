@@ -9,4 +9,10 @@
         <item name="colorSurface">@color/white</item>
         <item name="colorOnSurface">@color/text_black</item>
     </style>
+
+    <style name="Theme.App.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/white</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_ray_logo</item>
+        <item name="postSplashScreenTheme">@style/Theme.OfflineLLM</item>
+    </style>
 </resources>

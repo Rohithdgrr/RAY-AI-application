@@ -167,6 +167,17 @@
                 app:strokeColor="@color/primary"
                 app:cornerRadius="8dp" />
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnDelete"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Delete"
+                android:visibility="gone"
+                android:textColor="@color/error"
+                android:layout_marginStart="8dp"
+                android:textSize="14sp" />
+
         </LinearLayout>
 
     </LinearLayout>

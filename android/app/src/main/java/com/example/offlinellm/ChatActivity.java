@@ -18,7 +18,7 @@ public class ChatActivity extends AppCompatActivity {
     private List<ChatMessage> messages;
     private EditText chatInput;
     private TextView statusIndicator;
-    private InferenceEngine engine;
+    private volatile InferenceEngine engine;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,6 +29,15 @@ public class ChatActivity extends AppCompatActivity {
         recyclerView = findViewById(R.id.chatRecyclerView);
         chatInput = findViewById(R.id.chatInput);
         Button btnSend = findViewById(R.id.btnSend);
+
+        findViewById(R.id.btnModels).setOnClickListener(v -> {
+            ModelBottomSheet bottomSheet = new ModelBottomSheet();
+            bottomSheet.setListener(model -> {
+                statusIndicator.setText("Model: Switching...");
+                initEngine(model);
+            });
+            bottomSheet.show(getSupportFragmentManager(), "ModelBottomSheet");
+        });
 
         messages = new ArrayList<>();
         adapter = new ChatAdapter(messages);
@@ -42,12 +51,15 @@ public class ChatActivity extends AppCompatActivity {
     }
 
     private void initEngine() {
+        ModelManager manager = ModelManager.getInstance(this);
+        ModelManager.ModelInfo bestModel = manager.getBestDownloadedModel(ModelManager.Tier.LIGHT);
+        initEngine(bestModel);
+    }
+
+    private void initEngine(ModelManager.ModelInfo model) {
         new Thread(() -> {
             try {
-                ModelManager manager = ModelManager.getInstance(this);
-                ModelManager.ModelInfo bestModel = manager.getBestDownloadedModel(ModelManager.Tier.LIGHT);
-                
-                if (bestModel == null) {
+                if (model == null) {
                     runOnUiThread(() -> {
                         statusIndicator.setText("Model: Not found");
                         Toast.makeText(this, "Please download a model first", Toast.LENGTH_LONG).show();
@@ -55,11 +67,16 @@ public class ChatActivity extends AppCompatActivity {
                     return;
                 }
 
-                File encryptedFile = new File(getFilesDir(), bestModel.fileName);
+                if (engine != null) {
+                    engine.unload();
+                    engine = null;
+                }
+
+                File encryptedFile = new File(getFilesDir(), model.fileName);
                 engine = InferenceEngine.getForFile(this, encryptedFile);
                 engine.loadModel(encryptedFile);
 
-                runOnUiThread(() -> statusIndicator.setText("Model: " + bestModel.name));
+                runOnUiThread(() -> statusIndicator.setText("Model: " + model.name));
 
             } catch (Exception e) {
                 runOnUiThread(() -> {
@@ -72,7 +89,8 @@ public class ChatActivity extends AppCompatActivity {
 
     private void sendMessage() {
         String msgText = chatInput.getText().toString().trim();
-        if (msgText.isEmpty() || engine == null || !engine.isLoaded()) return;
+        InferenceEngine currentEngine = engine;
+        if (msgText.isEmpty() || currentEngine == null || !currentEngine.isLoaded()) return;
 
         chatInput.setText("");
         messages.add(new ChatMessage("You", msgText));
@@ -84,10 +102,11 @@ public class ChatActivity extends AppCompatActivity {
         int responseIndex = messages.size() - 1;
         adapter.notifyItemInserted(responseIndex);
 
-        engine.generate(msgText, new InferenceEngine.Callback() {
+        currentEngine.generate(msgText, new InferenceEngine.Callback() {
             @Override
             public void onToken(String token) {
                 runOnUiThread(() -> {
+                    if (isDestroyed()) return;
                     responseMessage.setText(responseMessage.getText() + token);
                     adapter.notifyItemChanged(responseIndex);
                     recyclerView.scrollToPosition(responseIndex);
@@ -99,7 +118,10 @@ public class ChatActivity extends AppCompatActivity {
 
             @Override
             public void onError(String message) {
-                runOnUiThread(() -> Toast.makeText(ChatActivity.this, message, Toast.LENGTH_SHORT).show());
+                runOnUiThread(() -> {
+                    if (isDestroyed()) return;
+                    Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
+                });
             }
         });
     }

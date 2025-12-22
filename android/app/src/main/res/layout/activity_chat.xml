@@ -6,15 +6,49 @@
     android:padding="16dp"
     android:background="@color/background">
 
-    <TextView
-        android:id="@+id/chatTitle"
-        android:layout_width="wrap_content"
+    <FrameLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="RAY AI Chat"
-        android:textSize="20sp"
-        android:textColor="@color/primary"
-        android:layout_gravity="center_horizontal"
-        android:layout_marginBottom="12dp" />
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="12dp">
+
+        <LinearLayout
+            android:id="@+id/dynamicIsland"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:layout_gravity="center_horizontal"
+            android:background="@drawable/dynamic_island_bg"
+            android:orientation="horizontal"
+            android:paddingHorizontal="16dp"
+            android:gravity="center_vertical"
+            android:elevation="4dp">
+
+            <TextView
+                android:id="@+id/chatTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="RAY AI"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="16dp"
+                android:background="#44FFFFFF"
+                android:layout_marginHorizontal="12dp" />
+
+            <ImageButton
+                android:id="@+id/btnModels"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="Models"
+                android:scaleType="centerInside"
+                android:src="@android:drawable/ic_menu_manage"
+                android:tint="#FFFFFF" />
+        </LinearLayout>
+    </FrameLayout>
 
     <TextView
         android:id="@+id/statusIndicator"
@@ -45,6 +79,8 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:hint="Type a message"
+            android:background="@drawable/input_box_bg"
+            android:padding="12dp"
             android:inputType="textMultiLine"
             android:minLines="1"
             android:maxLines="4"

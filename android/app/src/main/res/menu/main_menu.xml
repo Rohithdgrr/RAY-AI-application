@@ -3,6 +3,24 @@
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <item
+        android:id="@+id/action_new_chat"
+        android:title="@string/new_chat"
+        android:icon="@android:drawable/ic_input_add"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_chat_history"
+        android:title="@string/chat_history"
+        android:icon="@android:drawable/ic_menu_recent_history"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/action_settings"
+        android:title="Settings"
+        android:icon="@android:drawable/ic_menu_preferences"
+        app:showAsAction="ifRoom" />
+
+    <item
         android:id="@+id/action_models"
         android:title="Manage Models"
         android:icon="@android:drawable/ic_menu_manage"

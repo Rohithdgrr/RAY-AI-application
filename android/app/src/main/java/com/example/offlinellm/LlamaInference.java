@@ -53,22 +53,36 @@ public class LlamaInference implements InferenceEngine {
         }
     }
 
+    private final Object lock = new Object();
     private boolean isGenerating = false;
 
     @Override
     public void generate(String prompt, Callback callback) {
-        if (contextPointer == 0) {
-            callback.onError("Model not loaded");
-            return;
+        synchronized (lock) {
+            if (contextPointer == 0) {
+                callback.onError("Model not loaded");
+                return;
+            }
+            if (isGenerating) {
+                callback.onError("Already busy");
+                return;
+            }
+            isGenerating = true;
         }
-        if (isGenerating) {
-            callback.onError("Already busy");
-            return;
-        }
-        isGenerating = true;
+
         new Thread(() -> {
             try {
-                nativeGenerate(contextPointer, prompt, new NativeCallback() {
+                long currentPtr;
+                synchronized (lock) {
+                    currentPtr = contextPointer;
+                    if (currentPtr == 0) {
+                        isGenerating = false;
+                        callback.onError("Model not loaded");
+                        return;
+                    }
+                }
+                
+                nativeGenerate(currentPtr, prompt, new NativeCallback() {
                     @Override
                     public void onToken(String token) {
                         callback.onToken(token);
@@ -76,22 +90,31 @@ public class LlamaInference implements InferenceEngine {
 
                     @Override
                     public void onComplete() {
-                        isGenerating = false;
+                        synchronized (lock) {
+                            isGenerating = false;
+                        }
                         callback.onComplete();
                     }
                 });
             } catch (Exception e) {
-                isGenerating = false;
+                Log.e(TAG, "Generation failed", e);
                 callback.onError(e.getMessage());
+            } finally {
+                synchronized (lock) {
+                    isGenerating = false;
+                }
             }
         }).start();
     }
 
     @Override
     public void unload() {
-        if (contextPointer != 0) {
-            nativeFree(contextPointer);
-            contextPointer = 0;
+        synchronized (lock) {
+            if (contextPointer != 0) {
+                nativeFree(contextPointer);
+                contextPointer = 0;
+            }
+            isGenerating = false;
         }
         cleanupTempFile();
     }

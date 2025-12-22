@@ -11,4 +11,16 @@
     <string name="downloading">Downloading: %1$d%%</string>
     <string name="error_oom">Error: Not enough memory to load model.</string>
     <string name="error_generic">Error: %1$s</string>
+    
+    <!-- Chat History Strings -->
+    <string name="chat_history">Chat History</string>
+    <string name="new_chat">New Chat</string>
+    <string name="show_archived">Show Archived</string>
+    <string name="show_active">Show Active</string>
+    <string name="clear_all">Clear All</string>
+    <string name="archive_chat">Archive Chat</string>
+    <string name="unarchive_chat">Unarchive Chat</string>
+    <string name="rename_chat">Rename Chat</string>
+    <string name="delete_chat">Delete Chat</string>
+    <string name="share_chat">Share Chat</string>
 </resources>

@@ -1,186 +1,181 @@
 package com.example.offlinellm;
 
+import android.content.Intent;
 import android.os.Bundle;
-import android.view.Menu;
+import android.util.Log;
 import android.view.MenuItem;
-import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
-import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.RecyclerView;
-import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.example.offlinellm.HomeFragment;
+import com.example.offlinellm.ModelsFragment;
+import com.example.offlinellm.HistoryFragment;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import java.io.File;
-import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity {
-    private RecyclerView recyclerView;
-    private ChatAdapter adapter;
-    private List<ChatMessage> messages;
-    private EditText chatInput;
-    private TextView statusIndicator;
+public class MainActivity extends AppCompatActivity implements ModelManager.DownloadProgressListener {
     private InferenceEngine engine;
+    private ModelManager modelManager;
+    private ChatHistoryManager historyManager;
+    private boolean isGenerating = false;
+    private InferenceEngine.Callback currentGenerationCallback;
+    private TextView toolbarTitle;
+    private BottomNavigationView bottomNav;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+        androidx.core.splashscreen.SplashScreen.installSplashScreen(this);
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_main_new);
 
-        Toolbar toolbar = findViewById(R.id.toolbar);
-        setSupportActionBar(toolbar);
+        toolbarTitle = findViewById(R.id.toolbarTitle);
+        bottomNav = findViewById(R.id.bottom_navigation);
 
-        statusIndicator = findViewById(R.id.statusIndicator);
-        recyclerView = findViewById(R.id.chatRecyclerView);
-        chatInput = findViewById(R.id.chatInput);
-        FloatingActionButton btnSend = findViewById(R.id.btnSend);
+        modelManager = ModelManager.getInstance(this);
+        modelManager.addProgressListener(this);
+        historyManager = ChatHistoryManager.getInstance(this);
 
-        messages = new ArrayList<>();
-        adapter = new ChatAdapter(messages);
-        LinearLayoutManager layoutManager = new LinearLayoutManager(this);
-        layoutManager.setStackFromEnd(true);
-        recyclerView.setLayoutManager(layoutManager);
-        recyclerView.setAdapter(adapter);
+        bottomNav.setOnNavigationItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_home) {
+                showFragment(new HomeFragment(), "Home");
+                return true;
+            } else if (id == R.id.nav_models) {
+                showFragment(new ModelsFragment(), "Models");
+                return true;
+            } else if (id == R.id.nav_history) {
+                showFragment(new HistoryFragment(), "History");
+                return true;
+            }
+            return false;
+        });
 
-        statusIndicator.setText("Model: Loading...");
-        initEngine(null); // Load default or best model
-
-        btnSend.setOnClickListener(v -> sendMessage());
-    }
-
-    private void initEngine(ModelManager.ModelInfo specificModel) {
-        if (engine != null) {
-            engine.unload();
-            engine = null;
+        // Load default fragment
+        if (savedInstanceState == null) {
+            showFragment(new HomeFragment(), "Home");
         }
 
+        scanAndLoadBestModel();
+        
+        findViewById(R.id.btnNewChat).setOnClickListener(v -> createNewChat());
+        findViewById(R.id.btnMenu).setOnClickListener(v -> {
+            // Optional: Show drawer or menu
+        });
+    }
+
+    private void showFragment(Fragment fragment, String title) {
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.fragment_container, fragment)
+                .commit();
+        if (toolbarTitle != null) {
+            toolbarTitle.setText(title.equals("Home") ? "New conversation" : title);
+        }
+    }
+
+    public void showHome() {
+        bottomNav.setSelectedItemId(R.id.nav_home);
+    }
+
+    private void createNewChat() {
+        historyManager.createNewSession();
+        showHome(); // Refresh home with new context
+        Toast.makeText(this, "New chat started", Toast.LENGTH_SHORT).show();
+    }
+
+    public void handleChatMessage(String prompt, List<ChatMessage> messages, ChatAdapter adapter, RecyclerView recyclerView) {
+        if (engine == null || !engine.isLoaded()) {
+            Toast.makeText(this, "Model not ready. Please go to Models to download/load one.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        ChatMessage responseMessage = new ChatMessage("RAY", "", "Thinking...");
+        responseMessage.startGeneration();
+        messages.add(responseMessage);
+        int responseIndex = messages.size() - 1;
+        adapter.notifyItemInserted(responseIndex);
+        recyclerView.scrollToPosition(responseIndex);
+
+        isGenerating = true;
+
+        currentGenerationCallback = new InferenceEngine.Callback() {
+            @Override
+            public void onToken(String token) {
+                runOnUiThread(() -> {
+                    responseMessage.setText(responseMessage.getText() + token);
+                    adapter.notifyItemChanged(responseIndex);
+                    recyclerView.scrollToPosition(responseIndex);
+                });
+            }
+
+            @Override
+            public void onComplete() {
+                runOnUiThread(() -> {
+                    responseMessage.finishGeneration();
+                    adapter.notifyItemChanged(responseIndex);
+                    ChatSession session = historyManager.getActiveSession();
+                    if (session != null) {
+                        session.addMessage(new ChatMessage("You", prompt));
+                        session.addMessage(responseMessage);
+                        historyManager.updateSession(session);
+                    }
+                    isGenerating = false;
+                });
+            }
+
+            @Override
+            public void onError(String message) {
+                runOnUiThread(() -> {
+                    Toast.makeText(MainActivity.this, "Error: " + message, Toast.LENGTH_SHORT).show();
+                    responseMessage.setText("Error: " + message);
+                    adapter.notifyItemChanged(responseIndex);
+                    isGenerating = false;
+                });
+            }
+        };
+
+        engine.generate(prompt, currentGenerationCallback);
+    }
+
+    public void loadModel(ModelManager.ModelInfo model) {
+        if (engine != null) engine.unload();
         new Thread(() -> {
             try {
-                ModelManager manager = ModelManager.getInstance(this);
-                ModelManager.ModelInfo modelToLoad = specificModel;
-                
-                if (modelToLoad == null) {
-                    modelToLoad = manager.getBestDownloadedModel(ModelManager.Tier.LIGHT);
-                }
-                
-                if (modelToLoad == null) {
-                    runOnUiThread(() -> statusIndicator.setText("Model: None downloaded"));
-                    return;
-                }
-
-                File encryptedFile = new File(getFilesDir(), modelToLoad.fileName);
-                engine = InferenceEngine.getForFile(this, encryptedFile);
-                engine.loadModel(encryptedFile);
-
-                ModelManager.ModelInfo finalModel = modelToLoad;
-                runOnUiThread(() -> statusIndicator.setText("Model: " + finalModel.name));
-
+                File modelFile = new File(getFilesDir(), model.fileName);
+                engine = InferenceEngine.getForFile(this, modelFile);
+                engine.loadModel(modelFile);
+                runOnUiThread(() -> Toast.makeText(this, model.name + " ready", Toast.LENGTH_SHORT).show());
             } catch (Exception e) {
-                runOnUiThread(() -> {
-                    statusIndicator.setText("Model: Error");
-                    Toast.makeText(this, "Load failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
-                });
+                runOnUiThread(() -> Toast.makeText(this, "Load failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
             }
         }).start();
     }
 
-    private void sendMessage() {
-        String msgText = chatInput.getText().toString().trim();
-        if (msgText.isEmpty()) return;
-        
-        if (engine == null || !engine.isLoaded()) {
-            Toast.makeText(this, "Model not ready", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        chatInput.setText("");
-        ChatMessage userMessage = new ChatMessage("You", msgText);
-        messages.add(userMessage);
-        adapter.notifyItemInserted(messages.size() - 1);
-        recyclerView.scrollToPosition(messages.size() - 1);
-
-        ChatMessage responseMessage = new ChatMessage("RAY", "");
-        messages.add(responseMessage);
-        int responseIndex = messages.size() - 1;
-        adapter.notifyItemInserted(responseIndex);
-
-        try {
-            engine.generate(msgText, new InferenceEngine.Callback() {
-                @Override
-                public void onToken(String token) {
-                    runOnUiThread(() -> {
-                        if (responseMessage != null && messages.contains(responseMessage)) {
-                            responseMessage.setText(responseMessage.getText() + token);
-                            adapter.notifyItemChanged(responseIndex);
-                            recyclerView.scrollToPosition(responseIndex);
-                        }
-                    });
-                }
-
-                @Override
-                public void onComplete() {
-                    runOnUiThread(() -> {
-                        // Optional: Add completion indicator
-                    });
-                }
-
-                @Override
-                public void onError(String message) {
-                    runOnUiThread(() -> {
-                        Toast.makeText(MainActivity.this, "Generation error: " + message, Toast.LENGTH_SHORT).show();
-                        if (messages.contains(responseMessage)) {
-                            responseMessage.setText("Error: " + message);
-                            adapter.notifyItemChanged(responseIndex);
-                        }
-                    });
-                }
-            });
-        } catch (Exception e) {
-            Toast.makeText(this, "Unexpected error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-        }
-    }
-
-    private void showModelSheet() {
-        ModelBottomSheet sheet = new ModelBottomSheet();
-        sheet.setListener(this::initEngine);
-        sheet.show(getSupportFragmentManager(), "ModelSheet");
-    }
-
-    private void clearChat() {
-        new androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("Clear Chat")
-                .setMessage("Are you sure you want to clear all messages?")
-                .setPositiveButton("Yes", (dialog, which) -> {
-                    messages.clear();
-                    adapter.notifyDataSetChanged();
-                    Toast.makeText(this, "Chat cleared", Toast.LENGTH_SHORT).show();
-                })
-                .setNegativeButton("No", null)
-                .show();
+    private void scanAndLoadBestModel() {
+        new Thread(() -> {
+            modelManager.scanForExistingModels();
+            ModelManager.ModelInfo best = modelManager.getBestDownloadedModel(ModelManager.Tier.LIGHT);
+            if (best != null) loadModel(best);
+        }).start();
     }
 
     @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        getMenuInflater().inflate(R.menu.main_menu, menu);
-        return true;
-    }
-
+    public void onDownloadProgress(ModelManager.ModelInfo model, int progress, long downloadedBytes, long totalBytes) {}
     @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        if (item.getItemId() == R.id.action_models) {
-            showModelSheet();
-            return true;
-        } else if (item.getItemId() == R.id.action_clear) {
-            clearChat();
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
-    }
+    public void onDownloadStarted(ModelManager.ModelInfo model) {}
+    @Override
+    public void onDownloadCompleted(ModelManager.ModelInfo model) {}
+    @Override
+    public void onDownloadFailed(ModelManager.ModelInfo model, String error) {}
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         if (engine != null) engine.unload();
+        modelManager.removeProgressListener(this);
     }
 }
