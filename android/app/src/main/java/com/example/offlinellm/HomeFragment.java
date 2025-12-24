@@ -28,11 +28,9 @@ public class HomeFragment extends Fragment {
     private View inputCard;
     private ImageButton btnSend;
     
-    private InferenceEngine engine;
     private ChatHistoryManager historyManager;
     private ChatSession currentSession;
     private boolean isGenerating = false;
-    private InferenceEngine.Callback currentGenerationCallback;
 
     @Nullable
     @Override
@@ -50,16 +48,88 @@ public class HomeFragment extends Fragment {
         recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
         recyclerView.setAdapter(adapter);
         
+        // Setup action listener for chat actions
+        adapter.setOnChatActionListener(new ChatAdapter.OnChatActionListener() {
+            @Override
+            public void onCopy(ChatMessage message) {
+                // Handled by adapter default
+            }
+
+            @Override
+            public void onEdit(ChatMessage message) {
+                // Put the user message back in the input
+                if (message.getSender().equalsIgnoreCase("You")) {
+                    chatInput.setText(message.getText());
+                    chatInput.setSelection(chatInput.getText().length());
+                    chatInput.requestFocus();
+                }
+            }
+
+            @Override
+            public void onDownload(ChatMessage message) {
+                // Handled by adapter default (share)
+            }
+
+            @Override
+            public void onRegenerate(ChatMessage message) {
+                if (getActivity() instanceof MainActivity && !isGenerating) {
+                    // Find the user message before this AI message and regenerate
+                    int msgIndex = messages.indexOf(message);
+                    if (msgIndex > 0) {
+                        ChatMessage previousUserMsg = messages.get(msgIndex - 1);
+                        if (previousUserMsg.getSender().equalsIgnoreCase("You")) {
+                            // Remove the AI response and regenerate
+                            messages.remove(msgIndex);
+                            adapter.notifyItemRemoved(msgIndex);
+                            
+                            MainActivity activity = (MainActivity) getActivity();
+                            activity.handleChatMessage(previousUserMsg.getText(), messages, adapter, recyclerView);
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public void onMakeLonger(ChatMessage message) {
+                if (getActivity() instanceof MainActivity && !isGenerating) {
+                    // Create prompt to make longer
+                    String prompt = "Please expand on your previous response and provide more detail: " + message.getText();
+                    MainActivity activity = (MainActivity) getActivity();
+                    
+                    ChatMessage userMsg = new ChatMessage("You", "Make this longer");
+                    messages.add(userMsg);
+                    adapter.notifyItemInserted(messages.size() - 1);
+                    
+                    activity.handleChatMessage(prompt, messages, adapter, recyclerView);
+                }
+            }
+
+            @Override
+            public void onMakeShorter(ChatMessage message) {
+                if (getActivity() instanceof MainActivity && !isGenerating) {
+                    // Create prompt to make shorter
+                    String prompt = "Please summarize this in a shorter way: " + message.getText();
+                    MainActivity activity = (MainActivity) getActivity();
+                    
+                    ChatMessage userMsg = new ChatMessage("You", "Make this shorter");
+                    messages.add(userMsg);
+                    adapter.notifyItemInserted(messages.size() - 1);
+                    
+                    activity.handleChatMessage(prompt, messages, adapter, recyclerView);
+                }
+            }
+        });
+        
         historyManager = ChatHistoryManager.getInstance(getContext());
         loadActiveSession();
         
         // Listeners for input
         chatInput.setOnEditorActionListener((v, actionId, event) -> {
-            sendMessage();
+            handleSendButtonClick();
             return true;
         });
         
-        btnSend.setOnClickListener(v -> sendMessage());
+        btnSend.setOnClickListener(v -> handleSendButtonClick());
         
         return view;
     }
@@ -76,6 +146,16 @@ public class HomeFragment extends Fragment {
         }
     }
 
+    private void handleSendButtonClick() {
+        if (isGenerating) {
+            // Stop generation
+            stopGeneration();
+        } else {
+            // Send message
+            sendMessage();
+        }
+    }
+
     private void sendMessage() {
         String text = chatInput.getText().toString().trim();
         if (text.isEmpty()) return;
@@ -86,10 +166,47 @@ public class HomeFragment extends Fragment {
         recyclerView.scrollToPosition(messages.size() - 1);
         chatInput.setText("");
         
+        // Update UI for generating state
+        setGenerating(true);
+        
         // Simulation or engine call here
         if (getActivity() instanceof MainActivity) {
             MainActivity activity = (MainActivity) getActivity();
-            activity.handleChatMessage(text, messages, adapter, recyclerView);
+            boolean started = activity.handleChatMessage(text, messages, adapter, recyclerView);
+            if (!started) {
+                setGenerating(false);
+            }
+        } else {
+            setGenerating(false);
         }
+    }
+
+    public void setGenerating(boolean generating) {
+        this.isGenerating = generating;
+        if (getActivity() != null) {
+            getActivity().runOnUiThread(() -> {
+                if (generating) {
+                    btnSend.setImageResource(R.drawable.ic_stop);
+                    btnSend.setColorFilter(null); // Keep it white
+                } else {
+                    btnSend.setImageResource(R.drawable.ic_send);
+                    btnSend.setColorFilter(null);
+                }
+            });
+        }
+    }
+
+    private void stopGeneration() {
+        if (getActivity() instanceof MainActivity) {
+            MainActivity activity = (MainActivity) getActivity();
+            activity.stopGeneration();
+            setGenerating(false);
+            
+            Toast.makeText(getContext(), "Generation stopped", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    public void onGenerationComplete() {
+        setGenerating(false);
     }
 }

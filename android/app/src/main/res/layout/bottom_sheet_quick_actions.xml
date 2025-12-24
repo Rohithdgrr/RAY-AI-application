@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnNewChatQuick"
+            style="@style/RayAI.Button.Primary"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="New Chat"
+            app:icon="@drawable/ic_add_chat"
+            app:iconPadding="12dp"
+            app:iconGravity="textStart" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnHistoryQuick"
+            style="@style/RayAI.Button.Outlined"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="History"
+            app:icon="@drawable/ic_bottom_home"
+            app:iconPadding="12dp"
+            app:iconGravity="textStart"
+            android:layout_marginTop="12dp" />
+
+</LinearLayout>

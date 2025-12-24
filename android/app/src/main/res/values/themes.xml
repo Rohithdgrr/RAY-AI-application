@@ -1,18 +1,63 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <style name="Theme.OfflineLLM" parent="Theme.Material3.Light.NoActionBar">
-        <item name="colorPrimary">@color/primary_red_premium</item>
-        <item name="colorOnPrimary">@color/white</item>
-        <item name="colorSecondary">@color/primary_red_premium</item>
-        <item name="colorOnSecondary">@color/white</item>
-        <item name="android:statusBarColor">@color/white</item>
+        <!-- Primary Brand Color -->
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorOnPrimary">@color/text_white</item>
+        <item name="colorPrimaryContainer">@color/copilot_light_blue</item>
+        <item name="colorOnPrimaryContainer">@color/primary</item>
+        
+        <!-- Secondary Brand Color -->
+        <item name="colorSecondary">@color/secondary</item>
+        <item name="colorOnSecondary">@color/text_white</item>
+        
+        <!-- Tertiary Brand Color -->
+        <item name="colorTertiary">@color/accent</item>
+        <item name="colorOnTertiary">@color/text_white</item>
+        
+        <!-- Surface Colors -->
+        <item name="colorSurface">@color/surface</item>
+        <item name="colorOnSurface">@color/text_primary</item>
+        
+        <!-- Status Bar & Navigation -->
+        <item name="android:statusBarColor">@color/background</item>
         <item name="android:windowLightStatusBar">true</item>
-        <item name="colorSurface">@color/white</item>
-        <item name="colorOnSurface">@color/text_black</item>
+        <item name="android:navigationBarColor">@color/nav_background</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        
+        <!-- Error Color -->
+        <item name="colorError">@color/error</item>
+        <item name="colorOnError">@color/text_white</item>
+        
+        <!-- Text Appearance -->
+        <item name="android:textColorPrimary">@color/text_primary</item>
+        <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:textColorHint">@color/text_hint</item>
+        
+        <!-- Material Elevation -->
+        <item name="android:elevation">4dp</item>
     </style>
 
+    <!-- Splash Screen Theme -->
     <style name="Theme.App.Starting" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">@color/white</item>
+        <item name="windowSplashScreenBackground">@color/background</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_ray_logo</item>
         <item name="postSplashScreenTheme">@style/Theme.OfflineLLM</item>
+    </style>
+
+    <!-- Text Appearance Styles -->
+    <style name="TextAppearance.App.Headline" parent="TextAppearance.Material3.HeadlineLarge">
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <style name="TextAppearance.App.Title" parent="TextAppearance.Material3.TitleLarge">
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <style name="TextAppearance.App.Body" parent="TextAppearance.Material3.BodyMedium">
+        <item name="android:textColor">@color/text_primary</item>
+    </style>
+
+    <style name="TextAppearance.App.Caption" parent="TextAppearance.Material3.BodySmall">
+        <item name="android:textColor">@color/text_secondary</item>
     </style>
 </resources>

@@ -1,27 +1,96 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Premium Red & White Palette -->
-    <color name="primary">#E53935</color> <!-- Strong Red -->
-    <color name="primary_dark">#B71C1C</color>
-    <color name="primary_light">#FFCDD2</color>
-    <color name="accent">#FF5252</color>
-    <color name="background">#FFFFFF</color>
-    <color name="background_light">#F8F9FA</color>
+    <!-- New Orange/Red Gradient Palette -->
+    <color name="primary">#ff4d00</color>
+    <color name="primary_dark">#ff0000</color>
+    <color name="primary_light">#ff6700</color>
+    
+    <color name="secondary">#ff8100</color>
+    <color name="secondary_dark">#ff6700</color>
+    
+    <color name="accent">#ffa700</color>
+    <color name="accent_light">#ffcc80</color>
+    
+    <!-- Copilot-like Color Scheme (updated) -->
+    <color name="copilot_blue">#ff6700</color>
+    <color name="copilot_light_blue">#fff3e6</color>
+    
+    <!-- Background Colors -->
+    <color name="background">#FFF8F5</color>
+    <color name="background_light">#FFEDE6</color>
+    <color name="background_chat">#FFFAF8</color>
+    <color name="background_gradient_start">#FFFBF9</color>
+    <color name="background_gradient_end">#FFEDE6</color>
+    
+    <!-- Surface Colors -->
     <color name="surface">#FFFFFF</color>
-    <color name="on_surface">#1A1A1A</color>
-    <color name="text_primary">#1A1A1A</color>
-    <color name="text_secondary">#757575</color>
-    <color name="input_background">#F8F9FA</color>
+    <color name="surface_variant">#FFF5F0</color>
+    <color name="surface_elevated">#FFFFFF</color>
+    
+    <!-- Text Colors -->
+    <color name="text_primary">#1A0A00</color>
+    <color name="text_secondary">#5C3D2E</color>
+    <color name="text_tertiary">#8B6B5B</color>
+    <color name="text_hint">#B89A8A</color>
+    <color name="text_white">#FFFFFF</color>
+    
+    <!-- Input & UI Colors -->
+    <color name="input_background">#FFF8F5</color>
+    <color name="input_border">#FFE0D0</color>
+    <color name="input_border_focused">#ff4d00</color>
+    
+    <!-- Chat Bubble Colors -->
+    <color name="bubble_user_bg">#ff4d00</color>
+    <color name="bubble_user_text">#FFFFFF</color>
+    <color name="bubble_ai_bg">#FFF0E8</color>
+    <color name="bubble_ai_text">#1A1A1A</color>
+    
+    <!-- Status & Feedback Colors -->
+    <color name="success">#2ECC71</color>
+    <color name="success_light">#E8F8F0</color>
+    <color name="warning">#ffa700</color>
+    <color name="warning_light">#FFF8E6</color>
+    <color name="error">#E74C3C</color>
+    <color name="error_light">#FDEDEC</color>
+    
+    <!-- Divider & Border -->
+    <color name="divider">#FFE0D0</color>
+    <color name="divider_light">#FFF0E8</color>
+    
+    <!-- Navigation Colors -->
+    <color name="nav_selected">#ff4d00</color>
+    <color name="nav_unselected">#8B6B5B</color>
+    <color name="nav_background">#FFFFFF</color>
+    
+    <!-- Utility Colors -->
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>
-    <color name="text_black">#000000</color>
-    <color name="gray_light">#F5F5F5</color>
-    <color name="red_light">#FFEBEE</color>
-    <color name="divider">#EEEEEE</color>
-    <color name="background_chat">#F5F5F5</color>
-    <color name="secondary">#757575</color>
-    <color name="primary_red_premium">#E53935</color>
-    <color name="success">#4CAF50</color>
-    <color name="warning">#FF9800</color>
-    <color name="error">#F44336</color>
+    <color name="transparent">#00000000</color>
+    
+    <!-- Backward Compatibility -->
+    <color name="gray_light">#FFF5F0</color>
+    <color name="red_light">#FDEDEC</color>
+    <color name="primary_red_premium">#ff0000</color>
+    
+    <!-- Code Block Colors -->
+    <color name="code_bg">#2D1810</color>
+    <color name="code_text">#FFE8D8</color>
+    
+    <!-- Loading & Shimmer -->
+    <color name="shimmer_light">#FFE8D8</color>
+    <color name="shimmer_dark">#FFD0B8</color>
+
+    <!-- Glassmorphism helpers -->
+    <color name="glass_outline">#40FFFFFF</color>
+    <color name="glass_fill">#E6FFFFFF</color>
+    <color name="neon_purple">#ff6700</color>
+    <color name="neon_teal">#ffa700</color>
+    <color name="deep_space">#3D1A0A</color>
+
+    <!-- Tier Colors -->
+    <color name="tier_high_quality">#ff0000</color>
+    <color name="tier_balanced">#ff4d00</color>
+    <color name="tier_medium">#ff6700</color>
+    <color name="tier_light">#ff8100</color>
+    <color name="tier_ultra_light">#ffa700</color>
 </resources>

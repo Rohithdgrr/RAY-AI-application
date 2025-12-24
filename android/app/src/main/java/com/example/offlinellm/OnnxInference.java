@@ -18,9 +18,24 @@ public class OnnxInference implements InferenceEngine {
 
     @Override
     public void loadModel(File encryptedModelFile) throws Exception {
+        // Validate input file
+        if (encryptedModelFile == null || !encryptedModelFile.exists()) {
+            throw new Exception("Model file not found or is null");
+        }
+        
         // Decrypt to temp file
         tempDecryptedFile = new File(context.getCacheDir(), "temp_onnx_" + System.currentTimeMillis() + ".onnx");
         SecurityHelper.decryptFile(context, encryptedModelFile, tempDecryptedFile);
+
+        // Validate decryption result
+        if (tempDecryptedFile == null || !tempDecryptedFile.exists()) {
+            throw new Exception("Failed to decrypt model file");
+        }
+
+        String modelPath = tempDecryptedFile.getAbsolutePath();
+        if (modelPath == null || modelPath.isEmpty()) {
+            throw new Exception("Failed to get model file path");
+        }
 
         env = OrtEnvironment.getEnvironment();
         OrtSession.SessionOptions options = new OrtSession.SessionOptions();
@@ -29,7 +44,7 @@ public class OnnxInference implements InferenceEngine {
         } catch (Exception e) {
             // Fallback to CPU if NNAPI fails or not available
         }
-        session = env.createSession(tempDecryptedFile.getAbsolutePath(), options);
+        session = env.createSession(modelPath, options);
     }
 
     @Override
@@ -50,6 +65,12 @@ public class OnnxInference implements InferenceEngine {
     @Override
     public boolean isLoaded() {
         return session != null;
+    }
+
+    @Override
+    public void stop() {
+        // ONNX doesn't have a direct stop mechanism in this simple implementation
+        // In a full implementation, you would set a flag checked during generation
     }
 
     @Override

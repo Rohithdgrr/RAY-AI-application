@@ -2,20 +2,28 @@ package com.example.offlinellm;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.View;
 import android.util.Log;
-import android.view.MenuItem;
 import android.widget.TextView;
-import android.widget.Toast;
+import com.google.android.material.snackbar.Snackbar;
+import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.view.GravityCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.offlinellm.HomeFragment;
 import com.example.offlinellm.ModelsFragment;
-import com.example.offlinellm.HistoryFragment;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.navigation.NavigationView;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements ModelManager.DownloadProgressListener {
@@ -25,7 +33,13 @@ public class MainActivity extends AppCompatActivity implements ModelManager.Down
     private boolean isGenerating = false;
     private InferenceEngine.Callback currentGenerationCallback;
     private TextView toolbarTitle;
+    private CoordinatorLayout rootContainer;
+    private TextView modelNameText;
     private BottomNavigationView bottomNav;
+    private DrawerLayout drawerLayout;
+    private RecyclerView drawerHistoryRecycler;
+    private DrawerHistoryAdapter drawerHistoryAdapter;
+    private String currentModelName = "Not loaded";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -33,12 +47,19 @@ public class MainActivity extends AppCompatActivity implements ModelManager.Down
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main_new);
 
+        drawerLayout = findViewById(R.id.drawerLayout);
+        rootContainer = findViewById(R.id.rootContainer);
+
         toolbarTitle = findViewById(R.id.toolbarTitle);
+        modelNameText = findViewById(R.id.modelNameText);
         bottomNav = findViewById(R.id.bottom_navigation);
 
         modelManager = ModelManager.getInstance(this);
         modelManager.addProgressListener(this);
         historyManager = ChatHistoryManager.getInstance(this);
+
+        // Setup drawer
+        setupDrawer();
 
         bottomNav.setOnNavigationItemSelectedListener(item -> {
             int id = item.getItemId();
@@ -47,9 +68,6 @@ public class MainActivity extends AppCompatActivity implements ModelManager.Down
                 return true;
             } else if (id == R.id.nav_models) {
                 showFragment(new ModelsFragment(), "Models");
-                return true;
-            } else if (id == R.id.nav_history) {
-                showFragment(new HistoryFragment(), "History");
                 return true;
             }
             return false;
@@ -63,9 +81,69 @@ public class MainActivity extends AppCompatActivity implements ModelManager.Down
         scanAndLoadBestModel();
         
         findViewById(R.id.btnNewChat).setOnClickListener(v -> createNewChat());
-        findViewById(R.id.btnMenu).setOnClickListener(v -> {
-            // Optional: Show drawer or menu
-        });
+        findViewById(R.id.btnQuickActions).setOnClickListener(v -> toggleDrawer());
+    }
+
+    private void setupDrawer() {
+        // New Chat button in drawer
+        MaterialButton drawerNewChat = findViewById(R.id.drawerNewChat);
+        if (drawerNewChat != null) {
+            drawerNewChat.setOnClickListener(v -> {
+                drawerLayout.closeDrawer(GravityCompat.START);
+                createNewChat();
+            });
+        }
+
+        // View All History button
+        MaterialButton drawerViewAllHistory = findViewById(R.id.drawerViewAllHistory);
+        if (drawerViewAllHistory != null) {
+            drawerViewAllHistory.setOnClickListener(v -> {
+                drawerLayout.closeDrawer(GravityCompat.START);
+                startActivity(new Intent(this, ChatHistoryActivity.class));
+            });
+        }
+
+        // Setup recent chats RecyclerView
+        drawerHistoryRecycler = findViewById(R.id.drawerHistoryRecycler);
+        if (drawerHistoryRecycler != null) {
+            drawerHistoryRecycler.setLayoutManager(new LinearLayoutManager(this));
+            drawerHistoryAdapter = new DrawerHistoryAdapter(new ArrayList<>(), session -> {
+                drawerLayout.closeDrawer(GravityCompat.START);
+                historyManager.setActiveSession(session.getId());
+                showHome();
+            });
+            drawerHistoryRecycler.setAdapter(drawerHistoryAdapter);
+            loadRecentChats();
+        }
+    }
+
+    private void loadRecentChats() {
+        if (drawerHistoryAdapter != null) {
+            List<ChatSession> sessions = historyManager.getActiveSessions();
+            // Limit to 10 recent chats for the drawer
+            List<ChatSession> recentSessions = sessions.size() > 10 ? 
+                sessions.subList(0, 10) : sessions;
+            drawerHistoryAdapter.updateSessions(recentSessions);
+        }
+    }
+
+    private void toggleDrawer() {
+        if (drawerLayout == null) {
+            Log.e("MainActivity", "drawerLayout is null!");
+            return;
+        }
+        
+        try {
+            if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
+                drawerLayout.closeDrawer(GravityCompat.START);
+            } else {
+                loadRecentChats(); // Refresh recent chats before opening
+                drawerLayout.openDrawer(GravityCompat.START);
+                Log.d("MainActivity", "Drawer opened");
+            }
+        } catch (Exception e) {
+            Log.e("MainActivity", "Error toggling drawer", e);
+        }
     }
 
     private void showFragment(Fragment fragment, String title) {
@@ -73,7 +151,7 @@ public class MainActivity extends AppCompatActivity implements ModelManager.Down
                 .replace(R.id.fragment_container, fragment)
                 .commit();
         if (toolbarTitle != null) {
-            toolbarTitle.setText(title.equals("Home") ? "New conversation" : title);
+            toolbarTitle.setText(title.equals("Home") ? "RAY AI" : title);
         }
     }
 
@@ -84,13 +162,14 @@ public class MainActivity extends AppCompatActivity implements ModelManager.Down
     private void createNewChat() {
         historyManager.createNewSession();
         showHome(); // Refresh home with new context
-        Toast.makeText(this, "New chat started", Toast.LENGTH_SHORT).show();
+        showSnack("New chat started");
+        loadRecentChats(); // Update drawer
     }
 
-    public void handleChatMessage(String prompt, List<ChatMessage> messages, ChatAdapter adapter, RecyclerView recyclerView) {
+    public boolean handleChatMessage(String prompt, List<ChatMessage> messages, ChatAdapter adapter, RecyclerView recyclerView) {
         if (engine == null || !engine.isLoaded()) {
-            Toast.makeText(this, "Model not ready. Please go to Models to download/load one.", Toast.LENGTH_SHORT).show();
-            return;
+            showSnack("Model not ready. Please go to Models to download/load one.");
+            return false;
         }
 
         ChatMessage responseMessage = new ChatMessage("RAY", "", "Thinking...");
@@ -124,21 +203,36 @@ public class MainActivity extends AppCompatActivity implements ModelManager.Down
                         historyManager.updateSession(session);
                     }
                     isGenerating = false;
+                    
+                    // Notify HomeFragment if it's currently active
+                    Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment_container);
+                    if (fragment instanceof HomeFragment) {
+                        ((HomeFragment) fragment).onGenerationComplete();
+                    }
+                    
+                    loadRecentChats(); // Update drawer with new chat content
                 });
             }
 
             @Override
             public void onError(String message) {
                 runOnUiThread(() -> {
-                    Toast.makeText(MainActivity.this, "Error: " + message, Toast.LENGTH_SHORT).show();
+                    showSnack("Error: " + message);
                     responseMessage.setText("Error: " + message);
+                    responseMessage.finishGeneration();
                     adapter.notifyItemChanged(responseIndex);
                     isGenerating = false;
+                    
+                    Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment_container);
+                    if (fragment instanceof HomeFragment) {
+                        ((HomeFragment) fragment).onGenerationComplete();
+                    }
                 });
             }
         };
 
         engine.generate(prompt, currentGenerationCallback);
+        return true;
     }
 
     public void loadModel(ModelManager.ModelInfo model) {
@@ -148,9 +242,21 @@ public class MainActivity extends AppCompatActivity implements ModelManager.Down
                 File modelFile = new File(getFilesDir(), model.fileName);
                 engine = InferenceEngine.getForFile(this, modelFile);
                 engine.loadModel(modelFile);
-                runOnUiThread(() -> Toast.makeText(this, model.name + " ready", Toast.LENGTH_SHORT).show());
+                currentModelName = model.name;
+                runOnUiThread(() -> {
+                    if (modelNameText != null) {
+                        modelNameText.setText("Model: " + model.name);
+                    }
+                    showSnack(model.name + " ready");
+                });
             } catch (Exception e) {
-                runOnUiThread(() -> Toast.makeText(this, "Load failed: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                currentModelName = "Error";
+                runOnUiThread(() -> {
+                    if (modelNameText != null) {
+                        modelNameText.setText("Model: Error");
+                    }
+                    showSnack("Load failed: " + e.getMessage());
+                });
             }
         }).start();
     }
@@ -163,6 +269,34 @@ public class MainActivity extends AppCompatActivity implements ModelManager.Down
         }).start();
     }
 
+    public void stopGeneration() {
+        if (isGenerating && engine != null) {
+            engine.stop();
+            isGenerating = false;
+            
+            // Notify the HomeFragment
+            Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragment_container);
+            if (fragment instanceof HomeFragment) {
+                ((HomeFragment) fragment).onGenerationComplete();
+            }
+        }
+    }
+
+    private void showSnack(String message) {
+        if (rootContainer != null) {
+            Snackbar.make(rootContainer, message, Snackbar.LENGTH_LONG).show();
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            drawerLayout.closeDrawer(GravityCompat.START);
+        } else {
+            super.onBackPressed();
+        }
+    }
+
     @Override
     public void onDownloadProgress(ModelManager.ModelInfo model, int progress, long downloadedBytes, long totalBytes) {}
     @Override
@@ -171,6 +305,12 @@ public class MainActivity extends AppCompatActivity implements ModelManager.Down
     public void onDownloadCompleted(ModelManager.ModelInfo model) {}
     @Override
     public void onDownloadFailed(ModelManager.ModelInfo model, String error) {}
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        loadRecentChats();
+    }
 
     @Override
     protected void onDestroy() {

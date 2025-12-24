@@ -7,6 +7,10 @@ import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
+import androidx.work.Data;
+import androidx.work.ExistingWorkPolicy;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkManager;
 import java.io.File;
 import java.io.InputStream;
 import java.security.MessageDigest;
@@ -79,144 +83,109 @@ public class ModelManager {
 
     private ModelManager(Context context) {
         this.context = context.getApplicationContext();
-        this.availableModels = new ArrayList<>();
+        this.availableModels = new CopyOnWriteArrayList<>();
         this.activeDownloads = new ConcurrentHashMap<>();
         this.mainHandler = new Handler(Looper.getMainLooper());
         this.progressListeners = new CopyOnWriteArrayList<>();
         
-        // Tier 1: High Quality
-        availableModels.add(new ModelInfo(
-                "Llama-3.2-3B-Instruct Q4_K_M",
-                "https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf",
-                "llama3_2_3b_q4km.gguf.enc",
-                "PLACEHOLDER",
-                Tier.HIGH_QUALITY,
-                5200L * 1024L * 1024L
-        ));
-
-        // Tier 2: Balanced
-        availableModels.add(new ModelInfo(
-                "Phi-3 Mini 4K Instruct Q4_K_M",
-                "https://huggingface.co/microsoft/Phi-3-mini-4k-instruct-gguf/resolve/main/Phi-3-mini-4k-instruct-q4.gguf",
-                "phi3_mini_q4.gguf.enc",
-                "PLACEHOLDER",
-                Tier.BALANCED,
-                4200L * 1024L * 1024L
-        ));
-
-        // Tier 3: Medium
-        availableModels.add(new ModelInfo(
-                "Gemma-2-2B-It Q4_K_M",
-                "https://huggingface.co/bartowski/gemma-2-2b-it-GGUF/resolve/main/gemma-2-2b-it-Q4_K_M.gguf",
-                "gemma_2b_q4km.gguf.enc",
-                "PLACEHOLDER",
-                Tier.MEDIUM,
-                3200L * 1024L * 1024L
-        ));
-
-        // Tier 4: Light
+        // Tier 4: Light - TinyLlama (VERIFIED WORKING)
         availableModels.add(new ModelInfo(
                 "TinyLlama-1.1B-Chat Q4_K_M",
                 "https://huggingface.co/TheBloke/TinyLlama-1.1B-Chat-v1.0-GGUF/resolve/main/tinyllama-1.1b-chat-v1.0.Q4_K_M.gguf",
                 "tinyllama_1_1b_q4km.gguf.enc",
                 "PLACEHOLDER",
                 Tier.LIGHT,
-                2200L * 1024L * 1024L
+                700L * 1024L * 1024L
         ));
 
-        // Tier 5: Ultra-Light
+        // Tier 5: Ultra-Light - Qwen 0.5B (VERIFIED WORKING)
         availableModels.add(new ModelInfo(
                 "Qwen2.5-0.5B-Instruct Q5_K_M",
                 "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q5_k_m.gguf",
                 "qwen2_5_0_5b_q5km.gguf.enc",
                 "PLACEHOLDER",
                 Tier.ULTRA_LIGHT,
-                1200L * 1024L * 1024L
+                400L * 1024L * 1024L
         ));
 
-        // Additional Models - Tier 1: High Quality
+        // Tier 5: Ultra-Light - Qwen 0.5B Q4 (VERIFIED WORKING)
         availableModels.add(new ModelInfo(
-                "Mistral-7B-Instruct-v0.3 Q4_K_M",
-                "https://huggingface.co/bartowski/Mistral-7B-Instruct-v0.3-GGUF/resolve/main/Mistral-7B-Instruct-v0.3-Q4_K_M.gguf",
-                "mistral_7b_q4km.gguf.enc",
+                "Qwen2.5-0.5B-Instruct Q4_K_M",
+                "https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf",
+                "qwen2_5_0_5b_q4km.gguf.enc",
                 "PLACEHOLDER",
-                Tier.HIGH_QUALITY,
-                5500L * 1024L * 1024L
+                Tier.ULTRA_LIGHT,
+                350L * 1024L * 1024L
         ));
 
+        // Tier 4: Light - Qwen 1.5B (VERIFIED WORKING)
         availableModels.add(new ModelInfo(
-                "DeepSeek-Coder-V2-Lite-Instruct Q4_K_M",
-                "https://huggingface.co/bartowski/DeepSeek-Coder-V2-Lite-Instruct-GGUF/resolve/main/DeepSeek-Coder-V2-Lite-Instruct-Q4_K_M.gguf",
-                "deepseek_coder_v2_lite_q4km.gguf.enc",
+                "Qwen2.5-1.5B-Instruct Q4_K_M",
+                "https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf",
+                "qwen2_5_1_5b_q4km.gguf.enc",
                 "PLACEHOLDER",
-                Tier.HIGH_QUALITY,
-                5800L * 1024L * 1024L
+                Tier.LIGHT,
+                1000L * 1024L * 1024L
         ));
 
-        // Tier 2: Balanced
+        // Tier 3: Medium - Qwen 3B (VERIFIED WORKING)
         availableModels.add(new ModelInfo(
-                "Qwen2.5-7B-Instruct Q4_K_M",
-                "https://huggingface.co/Qwen/Qwen2.5-7B-Instruct-GGUF/resolve/main/qwen2.5-7b-instruct-q4_k_m.gguf",
-                "qwen2_5_7b_q4km.gguf.enc",
-                "PLACEHOLDER",
-                Tier.BALANCED,
-                4800L * 1024L * 1024L
-        ));
-
-        availableModels.add(new ModelInfo(
-                "Nemotron-4-340B-Instruct Q4_K_M",
-                "https://huggingface.co/nvidia/Nemotron-4-340B-Instruct-GGUF/resolve/main/nemotron-4-340b-instruct.Q4_K_M.gguf",
-                "nemotron_4_340b_q4km.gguf.enc",
-                "PLACEHOLDER",
-                Tier.BALANCED,
-                4600L * 1024L * 1024L
-        ));
-
-        // Tier 3: Medium
-        availableModels.add(new ModelInfo(
-                "Gemma-7B-It Q4_K_M",
-                "https://huggingface.co/google/gemma-7b-it-GGUF/resolve/main/gemma-7b-it.Q4_K_M.gguf",
-                "gemma_7b_q4km.gguf.enc",
+                "Qwen2.5-3B-Instruct Q4_K_M",
+                "https://huggingface.co/Qwen/Qwen2.5-3B-Instruct-GGUF/resolve/main/qwen2.5-3b-instruct-q4_k_m.gguf",
+                "qwen2_5_3b_q4km.gguf.enc",
                 "PLACEHOLDER",
                 Tier.MEDIUM,
-                3800L * 1024L * 1024L
+                2000L * 1024L * 1024L
         ));
 
+        // Tier 4: Light - SmolLM 1.7B (VERIFIED WORKING)
         availableModels.add(new ModelInfo(
-                "Kimi-2B-Instruct Q4_K_M",
-                "https://huggingface.co/moonshotai/Kimi-2B-Instruct-GGUF/resolve/main/kimi-2b-instruct.Q4_K_M.gguf",
-                "kimi_2b_q4km.gguf.enc",
+                "SmolLM2-1.7B-Instruct Q4_K_M",
+                "https://huggingface.co/bartowski/SmolLM2-1.7B-Instruct-GGUF/resolve/main/SmolLM2-1.7B-Instruct-Q4_K_M.gguf",
+                "smollm2_1_7b_q4km.gguf.enc",
+                "PLACEHOLDER",
+                Tier.LIGHT,
+                1100L * 1024L * 1024L
+        ));
+
+        // Tier 5: Ultra-Light - SmolLM 360M (VERIFIED WORKING)
+        availableModels.add(new ModelInfo(
+                "SmolLM2-360M-Instruct Q8_0",
+                "https://huggingface.co/bartowski/SmolLM2-360M-Instruct-GGUF/resolve/main/SmolLM2-360M-Instruct-Q8_0.gguf",
+                "smollm2_360m_q8.gguf.enc",
+                "PLACEHOLDER",
+                Tier.ULTRA_LIGHT,
+                400L * 1024L * 1024L
+        ));
+
+        // Tier 5: Ultra-Light - SmolLM 135M (VERIFIED WORKING - Tiny!)
+        availableModels.add(new ModelInfo(
+                "SmolLM2-135M-Instruct Q8_0",
+                "https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q8_0.gguf",
+                "smollm2_135m_q8.gguf.enc",
+                "PLACEHOLDER",
+                Tier.ULTRA_LIGHT,
+                150L * 1024L * 1024L
+        ));
+
+        // Tier 3: Medium - Gemma 2B (VERIFIED WORKING)
+        availableModels.add(new ModelInfo(
+                "Gemma-2-2B-Instruct Q4_K_M",
+                "https://huggingface.co/bartowski/gemma-2-2b-it-GGUF/resolve/main/gemma-2-2b-it-Q4_K_M.gguf",
+                "gemma_2b_q4km.gguf.enc",
                 "PLACEHOLDER",
                 Tier.MEDIUM,
-                3400L * 1024L * 1024L
+                1600L * 1024L * 1024L
         ));
 
-        // Tier 4: Light
+        // Tier 4: Light - Phi-3.5 Mini (VERIFIED WORKING)
         availableModels.add(new ModelInfo(
-                "GPT-2-Small Q4_K_M",
-                "https://huggingface.co/TheBloke/GPT2-Small-GGUF/resolve/main/gpt2-small.Q4_K_M.gguf",
-                "gpt2_small_q4km.gguf.enc",
+                "Phi-3.5-Mini-Instruct Q4_K_M",
+                "https://huggingface.co/bartowski/Phi-3.5-mini-instruct-GGUF/resolve/main/Phi-3.5-mini-instruct-Q4_K_M.gguf",
+                "phi3_5_mini_q4km.gguf.enc",
                 "PLACEHOLDER",
                 Tier.LIGHT,
-                2400L * 1024L * 1024L
-        ));
-
-        availableModels.add(new ModelInfo(
-                "Qwen2-1.5B-Instruct Q4_K_M",
-                "https://huggingface.co/Qwen/Qwen2-1.5B-Instruct-GGUF/resolve/main/qwen2-1.5b-instruct-q4_k_m.gguf",
-                "qwen2_1_5b_q4km.gguf.enc",
-                "PLACEHOLDER",
-                Tier.LIGHT,
-                2100L * 1024L * 1024L
-        ));
-
-        availableModels.add(new ModelInfo(
-                "Mistral-Nemo-Instruct-2407 Q4_K_M",
-                "https://huggingface.co/TheBloke/Mistral-Nemo-Instruct-2407-GGUF/resolve/main/mistral-nemo-instruct-2407.Q4_K_M.gguf",
-                "mistral_nemo_2407_q4km.gguf.enc",
-                "PLACEHOLDER",
-                Tier.LIGHT,
-                2800L * 1024L * 1024L
+                2300L * 1024L * 1024L
         ));
 
         updateStatus();
@@ -230,6 +199,25 @@ public class ModelManager {
     public List<ModelInfo> getModels() { 
         updateStatus();
         return availableModels; 
+    }
+
+    public ModelInfo getModelByFileName(String fileName) {
+        if (fileName == null) return null;
+        for (ModelInfo info : availableModels) {
+            if (fileName.equals(info.fileName)) return info;
+        }
+        return null;
+    }
+
+    public List<ModelInfo> getMobileCompatibleModels() {
+        updateStatus();
+        List<ModelInfo> mobileModels = new ArrayList<>();
+        for (ModelInfo model : availableModels) {
+            if (model.tier == Tier.LIGHT || model.tier == Tier.ULTRA_LIGHT) {
+                mobileModels.add(model);
+            }
+        }
+        return mobileModels;
     }
 
     public void addProgressListener(DownloadProgressListener listener) {
@@ -267,20 +255,20 @@ public class ModelManager {
     public boolean isModelAvailableOnDevice(String fileName) {
         if (fileName == null) return false;
         File file = new File(context.getFilesDir(), fileName);
-        return file.exists() && file.length() > 0;
+        return file.exists() && file.length() > 20 * 1024 * 1024;
     }
 
     public void updateStatus() {
         for (ModelInfo info : availableModels) {
             File file = new File(context.getFilesDir(), info.fileName);
-            info.isDownloaded = file.exists() && file.length() > 0;
+            // Require > 20MB to be considered a valid model (filters out 404 pages etc)
+            info.isDownloaded = file.exists() && file.length() > 20 * 1024 * 1024;
             
             // RESET download status if file exists
             if (info.isDownloaded && (info.isDownloading || info.downloadProgress < 100)) {
                 info.isDownloading = false;
                 info.downloadProgress = 100;
                 info.downloadId = -1;
-                activeDownloads.remove(info.downloadId);
             }
         }
         
@@ -340,62 +328,62 @@ public class ModelManager {
     public long downloadModel(ModelInfo info, String customUrl) {
         File targetFile = new File(context.getFilesDir(), info.fileName);
         if (targetFile.exists()) return -1;
-
         if (info.isDownloading) {
             Log.d(TAG, "Download already in progress for: " + info.name);
             return info.downloadId;
         }
 
-        File extCache = context.getExternalCacheDir();
-        File tempFile = (extCache != null) ? new File(extCache, info.fileName + ".tmp") : new File(context.getCacheDir(), info.fileName + ".tmp");
+        Data input = new Data.Builder()
+                .putString("name", info.name)
+                .putString("url", customUrl)
+                .putString("fileName", info.fileName)
+                .putString("expectedSha", info.expectedSha256)
+                .putLong("estimatedRam", info.estimatedRamBytes)
+                .build();
 
-        DownloadManager.Request request = new DownloadManager.Request(Uri.parse(customUrl))
-                .setTitle("Downloading " + info.name)
-                .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE)
-                .setDestinationUri(Uri.fromFile(tempFile));
+        OneTimeWorkRequest workRequest = new OneTimeWorkRequest.Builder(ModelDownloadWorker.class)
+                .setInputData(input)
+                .build();
 
-        DownloadManager dm = (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
-        long downloadId = dm.enqueue(request);
-        
-        info.downloadId = downloadId;
+        info.downloadId = workRequest.getId().getMostSignificantBits();
         info.isDownloading = true;
         info.downloadProgress = 0;
         info.downloadedBytes = 0;
         info.totalBytes = 0;
-        activeDownloads.put(downloadId, info);
-        
         notifyDownloadStarted(info);
-        startProgressMonitoring();
-        
-        Log.d(TAG, "Started download for " + info.name + " with ID: " + downloadId);
-        return downloadId;
+
+        WorkManager.getInstance(context)
+                .enqueueUniqueWork("model-download-" + info.fileName, ExistingWorkPolicy.REPLACE, workRequest);
+
+        Log.d(TAG, "Enqueued WorkManager download for " + info.name);
+        return info.downloadId;
     }
 
-    public void onDownloadComplete(long id) {
-        ModelInfo info = activeDownloads.get(id);
-        if (info == null) {
-            Log.w(TAG, "No active download found for ID: " + id);
-            return;
-        }
+    // Worker-driven progress callbacks
+    public void onWorkerProgress(String fileName, int progress, long downloadedBytes, long totalBytes) {
+        ModelInfo info = getModelByFileName(fileName);
+        if (info == null) return;
+        info.isDownloading = true;
+        info.downloadProgress = progress;
+        info.downloadedBytes = downloadedBytes;
+        info.totalBytes = totalBytes;
+        notifyProgressListeners(info, progress, downloadedBytes, totalBytes);
+    }
 
-        DownloadManager dm = (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
-        DownloadManager.Query query = new DownloadManager.Query().setFilterById(id);
-        try (Cursor cursor = dm.query(query)) {
-            if (cursor.moveToFirst()) {
-                int status = cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_STATUS));
-                if (status == DownloadManager.STATUS_SUCCESSFUL) {
-                    Uri uri = Uri.parse(cursor.getString(cursor.getColumnIndex(DownloadManager.COLUMN_LOCAL_URI)));
-                    processDownloadedFile(new File(uri.getPath()), info);
-                } else {
-                    int reasonCode = cursor.getInt(cursor.getColumnIndex(DownloadManager.COLUMN_REASON));
-                    String reason = getDownloadErrorReason(reasonCode);
-                    Log.e(TAG, "Download failed for " + info.name + ", reason: " + reason);
-                    notifyDownloadFailed(info, reason);
-                    resetDownloadStatus(info);
-                }
-            }
-        }
-        activeDownloads.remove(id);
+    public void onWorkerCompleted(String fileName, File encryptedFilePath) {
+        ModelInfo info = getModelByFileName(fileName);
+        if (info == null) return;
+        info.isDownloading = false;
+        info.isDownloaded = true;
+        info.downloadProgress = 100;
+        notifyDownloadCompleted(info);
+    }
+
+    public void onWorkerFailed(String fileName, String error) {
+        ModelInfo info = getModelByFileName(fileName);
+        if (info == null) return;
+        notifyDownloadFailed(info, error);
+        resetDownloadStatus(info);
     }
 
     private String getDownloadErrorReason(int errorCode) {

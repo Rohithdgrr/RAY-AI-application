@@ -18,9 +18,9 @@ public class DownloadReceiver extends BroadcastReceiver {
         String action = intent.getAction();
         if (DownloadManager.ACTION_DOWNLOAD_COMPLETE.equals(action)) {
             long downloadId = intent.getLongExtra(DownloadManager.EXTRA_DOWNLOAD_ID, -1);
-            Log.d(TAG, "Download completed for ID: " + downloadId);
-            
-            ModelManager.getInstance(context).onDownloadComplete(downloadId);
+            Log.d(TAG, "Legacy DownloadManager completion received for ID: " + downloadId);
+            // WorkManager now handles downloads; as a fallback, refresh model status
+            ModelManager.getInstance(context).scanForExistingModels();
         }
     }
 }

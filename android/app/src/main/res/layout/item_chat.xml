@@ -1,146 +1,237 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:padding="8dp">
+    android:orientation="vertical"
+    android:paddingHorizontal="12dp"
+    android:paddingVertical="6dp">
 
+    <!-- User Message Container (Right aligned) -->
     <LinearLayout
-        android:id="@+id/bubbleLayout"
-        android:layout_width="wrap_content"
+        android:id="@+id/userMessageContainer"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingHorizontal="14dp"
-        android:paddingVertical="10dp"
-        android:maxWidth="300dp"
-        app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toTopOf="@id/metadataLayout"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0">
+        android:gravity="end"
+        android:visibility="gone">
 
-        <TextView
-            android:id="@+id/messageSender"
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/bubbleLayout"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textSize="11sp"
-            android:alpha="0.7"
-            android:textColor="@color/text_primary"
-            android:textStyle="bold"
-            android:layout_marginBottom="2dp" />
+            android:maxWidth="280dp"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="@color/bubble_user_bg">
 
-        <TextView
-            android:id="@+id/messageText"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textColor="@color/text_primary"
-            android:textSize="16sp"
-            android:lineSpacingExtra="2dp"
-            android:autoLink="web|email|phone" />
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="10dp">
 
+                <TextView
+                    android:id="@+id/messageText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/bubble_user_text"
+                    android:textSize="15sp"
+                    android:lineSpacingExtra="2dp"
+                    android:autoLink="web|email|phone" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- User Message Actions: Copy, Edit -->
         <LinearLayout
-            android:id="@+id/codeBlocksContainer"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:visibility="gone" />
-    </LinearLayout>
-
-    <!-- Metadata Layout for AI responses -->
-    <LinearLayout
-        android:id="@+id/metadataLayout"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="4dp"
-        android:gravity="center_vertical"
-        android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@id/bubbleLayout"
-        app:layout_constraintStart_toStartOf="@id/bubbleLayout"
-        app:layout_constraintEnd_toEndOf="@id/bubbleLayout">
-
-        <TextView
-            android:id="@+id/modelNameText"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:textSize="10sp"
-            android:textColor="@color/text_secondary"
-            android:text="Model: Qwen2-0.5B" />
-
-        <TextView
-            android:id="@+id/responseTimeText"
+            android:id="@+id/userActionsLayout"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:textSize="10sp"
-            android:textColor="@color/text_secondary"
-            android:text="2.3s" />
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp"
+            android:gravity="end">
+
+            <ImageButton
+                android:id="@+id/btnUserCopy"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_action_copy"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:scaleType="centerInside"
+                android:padding="6dp"
+                android:contentDescription="Copy" />
+
+            <ImageButton
+                android:id="@+id/btnUserEdit"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_action_edit"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:scaleType="centerInside"
+                android:padding="6dp"
+                android:contentDescription="Edit" />
+
+        </LinearLayout>
+
+        <!-- User Timestamp -->
+        <TextView
+            android:id="@+id/userTimestamp"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="9sp"
+            android:textColor="@color/text_tertiary"
+            android:layout_marginTop="2dp" />
 
     </LinearLayout>
 
-    <!-- Action Buttons for AI responses -->
+    <!-- AI Message Container (Left aligned) -->
     <LinearLayout
-        android:id="@+id/actionButtonsLayout"
-        android:layout_width="0dp"
+        android:id="@+id/aiMessageContainer"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:layout_marginTop="8dp"
+        android:orientation="vertical"
         android:gravity="start"
-        android:visibility="gone"
-        app:layout_constraintTop_toBottomOf="@id/metadataLayout"
-        app:layout_constraintStart_toStartOf="@id/bubbleLayout"
-        app:layout_constraintEnd_toEndOf="@id/bubbleLayout">
+        android:visibility="gone">
 
-        <ImageButton
-            android:id="@+id/btnCopy"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:src="@android:drawable/ic_menu_save"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Copy"
-            android:tint="@color/text_secondary"
-            android:layout_marginEnd="8dp" />
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/aiBubbleLayout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:maxWidth="300dp"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="@color/bubble_ai_bg">
 
-        <ImageButton
-            android:id="@+id/btnRegenerate"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:src="@android:drawable/ic_menu_rotate"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:contentDescription="Regenerate"
-            android:tint="@color/text_secondary"
-            android:layout_marginEnd="8dp" />
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:paddingHorizontal="14dp"
+                android:paddingVertical="10dp">
 
-        <ImageButton
-            android:id="@+id/btnMakeShort"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_menu_zoom_in"
-            android:tint="@color/text_secondary"
-            android:layout_marginEnd="8dp" />
+                <!-- Typing Indicator -->
+                <ProgressBar
+                    android:id="@+id/typingIndicator"
+                    android:layout_width="40dp"
+                    android:layout_height="24dp"
+                    android:indeterminate="true"
+                    android:visibility="gone" />
 
-        <ImageButton
-            android:id="@+id/btnMakeLong"
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_menu_zoom_out"
-            android:contentDescription="Make Long"
-            android:tint="@color/text_secondary" />
+                <TextView
+                    android:id="@+id/aiMessageText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/bubble_ai_text"
+                    android:textSize="15sp"
+                    android:lineSpacingExtra="2dp"
+                    android:autoLink="web|email|phone" />
+
+                <!-- Code Blocks Container -->
+                <LinearLayout
+                    android:id="@+id/codeBlocksContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- AI Message Actions: Copy, Download, Retry, Make Long, Make Short -->
+        <LinearLayout
+            android:id="@+id/aiActionsLayout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="4dp"
+            android:gravity="start">
+
+            <ImageButton
+                android:id="@+id/btnAiCopy"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_action_copy"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:scaleType="centerInside"
+                android:padding="6dp"
+                android:contentDescription="Copy"
+                android:tint="@color/text_secondary" />
+
+            <ImageButton
+                android:id="@+id/btnAiDownload"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_action_download"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:scaleType="centerInside"
+                android:padding="6dp"
+                android:contentDescription="Download"
+                android:tint="@color/text_secondary" />
+
+            <ImageButton
+                android:id="@+id/btnAiRetry"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_action_retry"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:scaleType="centerInside"
+                android:padding="6dp"
+                android:contentDescription="Regenerate"
+                android:tint="@color/text_secondary" />
+
+            <ImageButton
+                android:id="@+id/btnAiLonger"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_action_longer"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:scaleType="centerInside"
+                android:padding="6dp"
+                android:contentDescription="Make Longer"
+                android:tint="@color/text_secondary" />
+
+            <ImageButton
+                android:id="@+id/btnAiShorter"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:src="@drawable/ic_action_shorter"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:scaleType="centerInside"
+                android:padding="6dp"
+                android:contentDescription="Make Shorter"
+                android:tint="@color/text_secondary" />
+
+        </LinearLayout>
+
+        <!-- AI Metadata Row -->
+        <LinearLayout
+            android:id="@+id/metadataLayout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="2dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/aiTimestamp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="9sp"
+                android:textColor="@color/text_tertiary" />
+
+            <TextView
+                android:id="@+id/responseTimeText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="9sp"
+                android:textColor="@color/text_tertiary"
+                android:layout_marginStart="8dp"
+                android:visibility="gone" />
+
+        </LinearLayout>
 
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/timestampText"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:textSize="10sp"
-        android:textColor="@color/text_secondary"
-        android:layout_marginTop="4dp"
-        app:layout_constraintTop_toBottomOf="@id/actionButtonsLayout"
-        app:layout_constraintStart_toStartOf="@id/bubbleLayout"
-        app:layout_constraintEnd_toEndOf="@id/bubbleLayout"
-        app:layout_constraintHorizontal_bias="0.0" />
-
-</androidx.constraintlayout.widget.ConstraintLayout>
+</LinearLayout>

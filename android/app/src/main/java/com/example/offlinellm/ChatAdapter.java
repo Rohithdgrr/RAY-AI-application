@@ -3,17 +3,18 @@ package com.example.offlinellm;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
-import android.view.Gravity;
+import android.content.Intent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 import androidx.annotation.NonNull;
-import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.recyclerview.widget.RecyclerView;
+import com.google.android.material.card.MaterialCardView;
 import java.util.List;
 
 public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
@@ -22,9 +23,11 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
 
     public interface OnChatActionListener {
         void onCopy(ChatMessage message);
+        void onEdit(ChatMessage message);
+        void onDownload(ChatMessage message);
         void onRegenerate(ChatMessage message);
-        void onMakeShort(ChatMessage message);
-        void onMakeLong(ChatMessage message);
+        void onMakeLonger(ChatMessage message);
+        void onMakeShorter(ChatMessage message);
     }
 
     public ChatAdapter(List<ChatMessage> messages) {
@@ -45,132 +48,158 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
         ChatMessage message = messages.get(position);
-        holder.sender.setText(message.getSender());
-        holder.timestamp.setText(message.getFormattedTime());
+        boolean isUserMessage = message.getSender().equalsIgnoreCase("You");
 
-        // Handle code blocks
-        String text = message.getText();
-        holder.codeBlocksContainer.removeAllViews();
-        
-        if (text.contains("```")) {
-            holder.codeBlocksContainer.setVisibility(View.VISIBLE);
-            renderMixedContent(holder, text);
+        if (isUserMessage) {
+            // Show user container, hide AI container
+            holder.userMessageContainer.setVisibility(View.VISIBLE);
+            holder.aiMessageContainer.setVisibility(View.GONE);
+
+            // Set message text
+            holder.messageText.setText(message.getText());
+            holder.userTimestamp.setText(message.getFormattedTime());
+
+            // Setup user actions
+            setupUserActions(holder, message);
+
         } else {
-            holder.codeBlocksContainer.setVisibility(View.GONE);
-            holder.text.setVisibility(View.VISIBLE);
-            holder.text.setText(text);
-        }
+            // Show AI container, hide user container
+            holder.userMessageContainer.setVisibility(View.GONE);
+            holder.aiMessageContainer.setVisibility(View.VISIBLE);
 
-        androidx.constraintlayout.widget.ConstraintLayout.LayoutParams params = (androidx.constraintlayout.widget.ConstraintLayout.LayoutParams) holder.bubbleLayout.getLayoutParams();
-        
-        if (message.getSender().equalsIgnoreCase("You")) {
-            params.horizontalBias = 1.0f;
-            holder.bubbleLayout.setBackgroundResource(R.drawable.bubble_user);
-            holder.sender.setVisibility(View.GONE);
-            holder.text.setTextColor(holder.itemView.getContext().getColor(android.R.color.white));
-            holder.timestamp.setTextColor(holder.itemView.getContext().getColor(R.color.text_secondary));
-            holder.timestamp.setGravity(Gravity.END);
-            
-            // Hide metadata and actions for user messages
-            holder.metadataLayout.setVisibility(View.GONE);
-            holder.actionButtonsLayout.setVisibility(View.GONE);
-        } else {
-            params.horizontalBias = 0.0f;
-            holder.bubbleLayout.setBackgroundResource(R.drawable.bubble_ai);
-            holder.sender.setVisibility(View.GONE); // Hide AI name too for modern look
-            holder.text.setTextColor(holder.itemView.getContext().getColor(R.color.text_primary));
-            holder.timestamp.setTextColor(holder.itemView.getContext().getColor(R.color.text_secondary));
-            holder.timestamp.setGravity(Gravity.START);
-            
-            // Show metadata and actions for AI responses
-            updateMetadata(holder, message);
-            setupActionButtons(holder, message);
-        }
-        holder.bubbleLayout.setLayoutParams(params);
-    }
+            String text = message.getText();
+            holder.codeBlocksContainer.removeAllViews();
 
-    private void updateMetadata(ViewHolder holder, ChatMessage message) {
-        if (message.isAIResponse()) {
-            holder.metadataLayout.setVisibility(View.VISIBLE);
-            holder.actionButtonsLayout.setVisibility(View.VISIBLE);
-            
-            // Set model name
-            if (message.getModelName() != null) {
-                holder.modelNameText.setText("Model: " + message.getModelName());
+            if (message.isGenerating()) {
+                holder.typingIndicator.setVisibility(View.VISIBLE);
+                holder.aiMessageText.setVisibility(View.GONE);
+                holder.codeBlocksContainer.setVisibility(View.GONE);
+                holder.aiActionsLayout.setVisibility(View.GONE);
             } else {
-                holder.modelNameText.setText("Model: Unknown");
+                holder.typingIndicator.setVisibility(View.GONE);
+                holder.aiActionsLayout.setVisibility(View.VISIBLE);
+
+                if (text.contains("```")) {
+                    holder.codeBlocksContainer.setVisibility(View.VISIBLE);
+                    holder.aiMessageText.setVisibility(View.GONE);
+                    renderMixedContent(holder, text);
+                } else {
+                    holder.codeBlocksContainer.setVisibility(View.GONE);
+                    holder.aiMessageText.setVisibility(View.VISIBLE);
+                    holder.aiMessageText.setText(text);
+                }
             }
-            
-            // Set response time
+
+            holder.aiTimestamp.setText(message.getFormattedTime());
+
+            // Response time
             if (message.getResponseTimeMs() > 0) {
-                holder.responseTimeText.setText(message.getFormattedResponseTime());
-            } else if (message.isGenerating()) {
-                holder.responseTimeText.setText("Generating...");
+                holder.responseTimeText.setVisibility(View.VISIBLE);
+                holder.responseTimeText.setText("• " + message.getFormattedResponseTime());
             } else {
                 holder.responseTimeText.setVisibility(View.GONE);
             }
-        } else {
-            holder.metadataLayout.setVisibility(View.GONE);
-            holder.actionButtonsLayout.setVisibility(View.GONE);
+
+            // Setup AI actions
+            setupAIActions(holder, message);
         }
     }
 
-    private void setupActionButtons(ViewHolder holder, ChatMessage message) {
-        // Copy button
-        holder.btnCopy.setOnClickListener(v -> {
+    private void setupUserActions(ViewHolder holder, ChatMessage message) {
+        Context context = holder.itemView.getContext();
+
+        // Copy action
+        holder.btnUserCopy.setOnClickListener(v -> {
             if (actionListener != null) {
                 actionListener.onCopy(message);
             } else {
-                // Default copy behavior
-                Context context = v.getContext();
-                ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-                ClipData clip = ClipData.newPlainText("Chat Message", message.getText());
-                clipboard.setPrimaryClip(clip);
-                Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show();
+                copyToClipboard(context, message.getText());
             }
         });
 
-        // Regenerate button
-        holder.btnRegenerate.setOnClickListener(v -> {
+        // Edit action
+        holder.btnUserEdit.setOnClickListener(v -> {
+            if (actionListener != null) {
+                actionListener.onEdit(message);
+            }
+        });
+    }
+
+    private void setupAIActions(ViewHolder holder, ChatMessage message) {
+        Context context = holder.itemView.getContext();
+
+        // Copy
+        holder.btnAiCopy.setOnClickListener(v -> {
+            if (actionListener != null) {
+                actionListener.onCopy(message);
+            } else {
+                copyToClipboard(context, message.getText());
+            }
+        });
+
+        // Download
+        holder.btnAiDownload.setOnClickListener(v -> {
+            if (actionListener != null) {
+                actionListener.onDownload(message);
+            } else {
+                // Default: share the text
+                Intent shareIntent = new Intent(Intent.ACTION_SEND);
+                shareIntent.setType("text/plain");
+                shareIntent.putExtra(Intent.EXTRA_TEXT, message.getText());
+                context.startActivity(Intent.createChooser(shareIntent, "Share response"));
+            }
+        });
+
+        // Retry/Regenerate
+        holder.btnAiRetry.setOnClickListener(v -> {
             if (actionListener != null) {
                 actionListener.onRegenerate(message);
             }
         });
 
-        // Make short button
-        holder.btnMakeShort.setOnClickListener(v -> {
+        // Make Longer
+        holder.btnAiLonger.setOnClickListener(v -> {
             if (actionListener != null) {
-                actionListener.onMakeShort(message);
+                actionListener.onMakeLonger(message);
             }
         });
 
-        // Make long button
-        holder.btnMakeLong.setOnClickListener(v -> {
+        // Make Shorter
+        holder.btnAiShorter.setOnClickListener(v -> {
             if (actionListener != null) {
-                actionListener.onMakeLong(message);
+                actionListener.onMakeShorter(message);
             }
         });
 
-        // Disable regenerate button if message is still generating
-        if (message.isGenerating()) {
-            holder.btnRegenerate.setEnabled(false);
-            holder.btnRegenerate.setAlpha(0.5f);
-        } else {
-            holder.btnRegenerate.setEnabled(true);
-            holder.btnRegenerate.setAlpha(1.0f);
-        }
+        // Disable actions during generation
+        boolean generating = message.isGenerating();
+        holder.btnAiRetry.setEnabled(!generating);
+        holder.btnAiLonger.setEnabled(!generating);
+        holder.btnAiShorter.setEnabled(!generating);
+        float alpha = generating ? 0.4f : 1.0f;
+        holder.btnAiRetry.setAlpha(alpha);
+        holder.btnAiLonger.setAlpha(alpha);
+        holder.btnAiShorter.setAlpha(alpha);
+    }
+
+    private void copyToClipboard(Context context, String text) {
+        ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+        ClipData clip = ClipData.newPlainText("Chat Message", text);
+        clipboard.setPrimaryClip(clip);
+        Toast.makeText(context, "Copied to clipboard", Toast.LENGTH_SHORT).show();
     }
 
     private void renderMixedContent(ViewHolder holder, String text) {
-        holder.text.setVisibility(View.GONE);
+        holder.aiMessageText.setVisibility(View.GONE);
+
         String[] parts = text.split("```");
         for (int i = 0; i < parts.length; i++) {
             String part = parts[i];
             if (part.trim().isEmpty()) continue;
 
-            if (i % 2 == 1) { // This is a code block
+            if (i % 2 == 1) {
                 addCodeBlockView(holder, part);
-            } else { // This is regular text
+            } else {
                 addTextView(holder, part);
             }
         }
@@ -179,21 +208,20 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
     private void addTextView(ViewHolder holder, String text) {
         TextView tv = new TextView(holder.itemView.getContext());
         tv.setText(text.trim());
-        tv.setTextSize(16);
+        tv.setTextSize(15);
+        tv.setTextColor(holder.itemView.getContext().getColor(R.color.bubble_ai_text));
         tv.setPadding(0, 4, 0, 4);
-        tv.setTextColor(holder.text.getCurrentTextColor());
         holder.codeBlocksContainer.addView(tv);
     }
 
     private void addCodeBlockView(ViewHolder holder, String codeContent) {
         View codeView = LayoutInflater.from(holder.itemView.getContext())
-                .inflate(R.layout.layout_code_block, holder.codeBlocksContainer, false);
-        
+                .inflate(R.layout.layout_code_block, null, false);
+
         TextView langTv = codeView.findViewById(R.id.codeLanguage);
         TextView codeTv = codeView.findViewById(R.id.codeText);
         View copyBtn = codeView.findViewById(R.id.btnCopyCode);
 
-        // Extract language if present
         String lang = "Code";
         String code = codeContent;
         int firstNewLine = codeContent.indexOf("\n");
@@ -201,45 +229,65 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
             lang = codeContent.substring(0, firstNewLine).trim();
             code = codeContent.substring(firstNewLine).trim();
         }
-        
+
         if (lang.isEmpty()) lang = "Code";
         langTv.setText(lang);
         codeTv.setText(code);
 
         final String finalCode = code;
         copyBtn.setOnClickListener(v -> {
-            ClipboardManager clipboard = (ClipboardManager) v.getContext().getSystemService(Context.CLIPBOARD_SERVICE);
-            ClipData clip = ClipData.newPlainText("Code", finalCode);
-            clipboard.setPrimaryClip(clip);
-            Toast.makeText(v.getContext(), "Code copied", Toast.LENGTH_SHORT).show();
+            copyToClipboard(v.getContext(), finalCode);
         });
 
         holder.codeBlocksContainer.addView(codeView);
     }
 
     @Override
-    public int getItemCount() { return messages.size(); }
+    public int getItemCount() {
+        return messages.size();
+    }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
-        TextView sender, text, timestamp, modelNameText, responseTimeText;
-        LinearLayout bubbleLayout, metadataLayout, actionButtonsLayout, codeBlocksContainer;
-        ImageButton btnCopy, btnRegenerate, btnMakeShort, btnMakeLong;
-        
+        // User message elements
+        LinearLayout userMessageContainer;
+        MaterialCardView bubbleLayout;
+        TextView messageText, userTimestamp;
+        ImageButton btnUserCopy, btnUserEdit;
+
+        // AI message elements
+        LinearLayout aiMessageContainer, codeBlocksContainer, aiActionsLayout, metadataLayout;
+        MaterialCardView aiBubbleLayout;
+        TextView aiMessageText, aiTimestamp, responseTimeText;
+        ProgressBar typingIndicator;
+        ImageButton btnAiCopy, btnAiDownload, btnAiRetry, btnAiLonger, btnAiShorter;
+
         ViewHolder(View view) {
             super(view);
-            sender = view.findViewById(R.id.messageSender);
-            text = view.findViewById(R.id.messageText);
-            timestamp = view.findViewById(R.id.timestampText);
+            // User message
+            userMessageContainer = view.findViewById(R.id.userMessageContainer);
             bubbleLayout = view.findViewById(R.id.bubbleLayout);
-            metadataLayout = view.findViewById(R.id.metadataLayout);
-            actionButtonsLayout = view.findViewById(R.id.actionButtonsLayout);
+            messageText = view.findViewById(R.id.messageText);
+            userTimestamp = view.findViewById(R.id.userTimestamp);
+            btnUserCopy = view.findViewById(R.id.btnUserCopy);
+            btnUserEdit = view.findViewById(R.id.btnUserEdit);
+
+            // AI message
+            aiMessageContainer = view.findViewById(R.id.aiMessageContainer);
+            aiBubbleLayout = view.findViewById(R.id.aiBubbleLayout);
+            aiMessageText = view.findViewById(R.id.aiMessageText);
             codeBlocksContainer = view.findViewById(R.id.codeBlocksContainer);
-            modelNameText = view.findViewById(R.id.modelNameText);
+            typingIndicator = view.findViewById(R.id.typingIndicator);
+            aiActionsLayout = view.findViewById(R.id.aiActionsLayout);
+            metadataLayout = view.findViewById(R.id.metadataLayout);
+            aiTimestamp = view.findViewById(R.id.aiTimestamp);
             responseTimeText = view.findViewById(R.id.responseTimeText);
-            btnCopy = view.findViewById(R.id.btnCopy);
-            btnRegenerate = view.findViewById(R.id.btnRegenerate);
-            btnMakeShort = view.findViewById(R.id.btnMakeShort);
-            btnMakeLong = view.findViewById(R.id.btnMakeLong);
+
+            // AI action buttons
+            btnAiCopy = view.findViewById(R.id.btnAiCopy);
+            btnAiDownload = view.findViewById(R.id.btnAiDownload);
+            btnAiRetry = view.findViewById(R.id.btnAiRetry);
+            btnAiLonger = view.findViewById(R.id.btnAiLonger);
+            btnAiShorter = view.findViewById(R.id.btnAiShorter);
         }
     }
 }
