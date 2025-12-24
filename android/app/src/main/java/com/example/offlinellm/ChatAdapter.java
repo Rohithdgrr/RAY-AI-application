@@ -75,13 +75,24 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
             holder.codeBlocksContainer.removeAllViews();
 
             if (message.isGenerating()) {
-                holder.typingIndicator.setVisibility(View.VISIBLE);
+                holder.thinkingLayout.setVisibility(View.VISIBLE);
+                holder.thoughtContainer.setVisibility(View.GONE);
                 holder.aiMessageText.setVisibility(View.GONE);
                 holder.codeBlocksContainer.setVisibility(View.GONE);
                 holder.aiActionsLayout.setVisibility(View.GONE);
+                holder.metadataLayout.setVisibility(View.GONE);
             } else {
-                holder.typingIndicator.setVisibility(View.GONE);
+                holder.thinkingLayout.setVisibility(View.GONE);
                 holder.aiActionsLayout.setVisibility(View.VISIBLE);
+                holder.metadataLayout.setVisibility(View.VISIBLE);
+
+                // Thought / Reasoning display
+                if (message.getThought() != null && !message.getThought().trim().isEmpty()) {
+                    holder.thoughtContainer.setVisibility(View.VISIBLE);
+                    holder.thoughtText.setText(message.getThought().trim());
+                } else {
+                    holder.thoughtContainer.setVisibility(View.GONE);
+                }
 
                 if (text.contains("```")) {
                     holder.codeBlocksContainer.setVisibility(View.VISIBLE);
@@ -204,10 +215,9 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
-        LinearLayout userMessageContainer, aiMessageContainer, codeBlocksContainer, aiActionsLayout, metadataLayout;
-        MaterialCardView bubbleLayout, aiBubbleLayout;
-        TextView messageText, userTimestamp, aiMessageText, aiTimestamp, responseTimeText;
-        ProgressBar typingIndicator;
+        LinearLayout userMessageContainer, aiMessageContainer, codeBlocksContainer, aiActionsLayout, metadataLayout, thinkingLayout;
+        MaterialCardView bubbleLayout, aiBubbleLayout, thoughtContainer;
+        TextView messageText, userTimestamp, aiMessageText, aiTimestamp, responseTimeText, thoughtText;
         ImageButton btnUserCopy, btnUserEdit, btnAiCopy, btnAiDownload, btnAiRetry, btnAiLonger, btnAiShorter;
 
         ViewHolder(View view) {
@@ -220,9 +230,11 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
             btnUserEdit = view.findViewById(R.id.btnUserEdit);
             aiMessageContainer = view.findViewById(R.id.aiMessageContainer);
             aiBubbleLayout = view.findViewById(R.id.aiBubbleLayout);
+            thoughtContainer = view.findViewById(R.id.thoughtContainer);
+            thoughtText = view.findViewById(R.id.thoughtText);
             aiMessageText = view.findViewById(R.id.aiMessageText);
             codeBlocksContainer = view.findViewById(R.id.codeBlocksContainer);
-            typingIndicator = view.findViewById(R.id.typingIndicator);
+            thinkingLayout = view.findViewById(R.id.thinkingLayout);
             aiActionsLayout = view.findViewById(R.id.aiActionsLayout);
             metadataLayout = view.findViewById(R.id.metadataLayout);
             aiTimestamp = view.findViewById(R.id.aiTimestamp);

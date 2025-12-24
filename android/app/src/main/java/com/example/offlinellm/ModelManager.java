@@ -53,6 +53,7 @@ public class ModelManager {
     }
 
     public static class ModelInfo {
+        public String usage;
         public String name;
         public String url;
         public String fileName;
@@ -67,6 +68,10 @@ public class ModelManager {
         public long totalBytes;
 
         public ModelInfo(String name, String url, String fileName, String expectedSha256, Tier tier, long estimatedRamBytes) {
+            this(name, url, fileName, expectedSha256, tier, estimatedRamBytes, "Text Generation");
+        }
+
+        public ModelInfo(String name, String url, String fileName, String expectedSha256, Tier tier, long estimatedRamBytes, String usage) {
             this.name = name;
             this.url = url;
             this.fileName = fileName;
@@ -78,6 +83,19 @@ public class ModelManager {
             this.downloadProgress = 0;
             this.downloadedBytes = 0;
             this.totalBytes = 0;
+            this.usage = categorize(name, usage);
+        }
+
+        private String categorize(String name, String usage) {
+            if (usage != null && !usage.equals("Text Generation")) return usage;
+            String lowerName = name.toLowerCase();
+            if (lowerName.contains("code") || lowerName.contains("coder")) return "Coding";
+            if (lowerName.contains("reasoning") || lowerName.contains("think") || lowerName.contains("r1")) return "Reasoning";
+            if (lowerName.contains("summariz")) return "Summarization";
+            if (lowerName.contains("image") || lowerName.contains("diffusion")) return "Image Generation";
+            if (lowerName.contains("vision") || lowerName.contains("llava")) return "Vision";
+            if (lowerName.contains("chat") || lowerName.contains("instruct")) return "Text Generation";
+            return usage != null ? usage : "Text Generation";
         }
     }
 
@@ -95,7 +113,8 @@ public class ModelManager {
                 "tinyllama_1_1b_q4km.gguf.enc",
                 "PLACEHOLDER",
                 Tier.LIGHT,
-                700L * 1024L * 1024L
+                700L * 1024L * 1024L,
+                "Text Generation"
         ));
 
         // Tier 5: Ultra-Light - Qwen 0.5B (VERIFIED WORKING)
@@ -105,7 +124,8 @@ public class ModelManager {
                 "qwen2_5_0_5b_q5km.gguf.enc",
                 "PLACEHOLDER",
                 Tier.ULTRA_LIGHT,
-                400L * 1024L * 1024L
+                400L * 1024L * 1024L,
+                "Text Generation"
         ));
 
         // Tier 5: Ultra-Light - Qwen 0.5B Q4 (VERIFIED WORKING)
@@ -115,7 +135,8 @@ public class ModelManager {
                 "qwen2_5_0_5b_q4km.gguf.enc",
                 "PLACEHOLDER",
                 Tier.ULTRA_LIGHT,
-                350L * 1024L * 1024L
+                350L * 1024L * 1024L,
+                "Text Generation"
         ));
 
         // Tier 4: Light - Qwen 1.5B (VERIFIED WORKING)
@@ -125,7 +146,8 @@ public class ModelManager {
                 "qwen2_5_1_5b_q4km.gguf.enc",
                 "PLACEHOLDER",
                 Tier.LIGHT,
-                1000L * 1024L * 1024L
+                1000L * 1024L * 1024L,
+                "Text Generation"
         ));
 
         // Tier 3: Medium - Qwen 3B (VERIFIED WORKING)
@@ -135,7 +157,8 @@ public class ModelManager {
                 "qwen2_5_3b_q4km.gguf.enc",
                 "PLACEHOLDER",
                 Tier.MEDIUM,
-                2000L * 1024L * 1024L
+                2000L * 1024L * 1024L,
+                "Reasoning"
         ));
 
         // Tier 4: Light - SmolLM 1.7B (VERIFIED WORKING)
@@ -145,47 +168,85 @@ public class ModelManager {
                 "smollm2_1_7b_q4km.gguf.enc",
                 "PLACEHOLDER",
                 Tier.LIGHT,
-                1100L * 1024L * 1024L
+                1100L * 1024L * 1024L,
+                "Text Generation"
         ));
 
-        // Tier 5: Ultra-Light - SmolLM 360M (VERIFIED WORKING)
+        // Tier 3: Medium - DeepSeek Coder 1.3B (CODING)
         availableModels.add(new ModelInfo(
-                "SmolLM2-360M-Instruct Q8_0",
-                "https://huggingface.co/bartowski/SmolLM2-360M-Instruct-GGUF/resolve/main/SmolLM2-360M-Instruct-Q8_0.gguf",
-                "smollm2_360m_q8.gguf.enc",
+                "DeepSeek-Coder-1.3B-Instruct Q4_K_M",
+                "https://huggingface.co/TheBloke/deepseek-coder-1.3B-instruct-GGUF/resolve/main/deepseek-coder-1.3b-instruct.Q4_K_M.gguf",
+                "deepseek_coder_1_3b_q4km.gguf.enc",
                 "PLACEHOLDER",
-                Tier.ULTRA_LIGHT,
-                400L * 1024L * 1024L
+                Tier.LIGHT,
+                900L * 1024L * 1024L,
+                "Coding"
         ));
 
-        // Tier 5: Ultra-Light - SmolLM 135M (VERIFIED WORKING - Tiny!)
-        availableModels.add(new ModelInfo(
-                "SmolLM2-135M-Instruct Q8_0",
-                "https://huggingface.co/bartowski/SmolLM2-135M-Instruct-GGUF/resolve/main/SmolLM2-135M-Instruct-Q8_0.gguf",
-                "smollm2_135m_q8.gguf.enc",
-                "PLACEHOLDER",
-                Tier.ULTRA_LIGHT,
-                150L * 1024L * 1024L
-        ));
-
-        // Tier 3: Medium - Gemma 2B (VERIFIED WORKING)
-        availableModels.add(new ModelInfo(
-                "Gemma-2-2B-Instruct Q4_K_M",
-                "https://huggingface.co/bartowski/gemma-2-2b-it-GGUF/resolve/main/gemma-2-2b-it-Q4_K_M.gguf",
-                "gemma_2b_q4km.gguf.enc",
-                "PLACEHOLDER",
-                Tier.MEDIUM,
-                1600L * 1024L * 1024L
-        ));
-
-        // Tier 4: Light - Phi-3.5 Mini (VERIFIED WORKING)
+        // Tier 4: Light - Phi-3.5 Mini (REASONING/TEXT)
         availableModels.add(new ModelInfo(
                 "Phi-3.5-Mini-Instruct Q4_K_M",
                 "https://huggingface.co/bartowski/Phi-3.5-mini-instruct-GGUF/resolve/main/Phi-3.5-mini-instruct-Q4_K_M.gguf",
                 "phi3_5_mini_q4km.gguf.enc",
                 "PLACEHOLDER",
                 Tier.LIGHT,
-                2300L * 1024L * 1024L
+                2300L * 1024L * 1024L,
+                "Reasoning"
+        ));
+
+        // Tier 4: Light - Llama-3.2-1B-Instruct (TEXT GENERATION)
+        availableModels.add(new ModelInfo(
+                "Llama-3.2-1B-Instruct Q4_K_M",
+                "https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf",
+                "llama3_2_1b_q4km.gguf.enc",
+                "PLACEHOLDER",
+                Tier.ULTRA_LIGHT,
+                800L * 1024L * 1024L,
+                "Text Generation"
+        ));
+
+        // Tier 3: Medium - Llama-3.2-3B-Instruct (HIGH QUALITY)
+        availableModels.add(new ModelInfo(
+                "Llama-3.2-3B-Instruct Q4_K_M",
+                "https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf",
+                "llama3_2_3b_q4km.gguf.enc",
+                "PLACEHOLDER",
+                Tier.MEDIUM,
+                2200L * 1024L * 1024L,
+                "Text Generation"
+        ));
+
+        // Tier 3: Medium - DeepSeek-R1-Distill-Qwen-1.5B (REASONING)
+        availableModels.add(new ModelInfo(
+                "DeepSeek-R1-Distill-Qwen-1.5B Q4_K_M",
+                "https://huggingface.co/bartowski/DeepSeek-R1-Distill-Qwen-1.5B-GGUF/resolve/main/DeepSeek-R1-Distill-Qwen-1.5B-Q4_K_M.gguf",
+                "deepseek_r1_1_5b_q4km.gguf.enc",
+                "PLACEHOLDER",
+                Tier.LIGHT,
+                1100L * 1024L * 1024L,
+                "Reasoning"
+        ));
+
+        // Tier 2: Balanced - DeepSeek-R1-Distill-Qwen-7B (POWERFUL REASONING)
+        availableModels.add(new ModelInfo(
+                "DeepSeek-R1-Distill-Qwen-7B Q4_K_M",
+                "https://huggingface.co/bartowski/DeepSeek-R1-Distill-Qwen-7B-GGUF/resolve/main/DeepSeek-R1-Distill-Qwen-7B-Q4_K_M.gguf",
+                "deepseek_r1_7b_q4km.gguf.enc",
+                "PLACEHOLDER",
+                Tier.BALANCED,
+                5500L * 1024L * 1024L,
+                "Reasoning"
+        ));
+
+        // Tier 3: Medium - Qwen2.5-Coder-3B-Instruct (CODING)
+        availableModels.add(new ModelInfo(
+                "Qwen2.5-Coder-3B-Instruct Q4_K_M",
+                "https://huggingface.co/bartowski/Qwen2.5-Coder-3B-Instruct-GGUF/resolve/main/Qwen2.5-Coder-3B-Instruct-Q4_K_M.gguf",
+                "qwen2_5_coder_3b_q4km.gguf.enc",
+                "PLACEHOLDER",
+                Tier.MEDIUM,
+                2100L * 1024L * 1024L,
+                "Coding"
         ));
 
         updateStatus();
@@ -199,6 +260,15 @@ public class ModelManager {
     public List<ModelInfo> getModels() { 
         updateStatus();
         return availableModels; 
+    }
+
+    public static Tier getTierForRam(long ramBytes) {
+        long mb = ramBytes / (1024L * 1024L);
+        if (mb >= Tier.HIGH_QUALITY.minRamMb) return Tier.HIGH_QUALITY;
+        if (mb >= Tier.BALANCED.minRamMb) return Tier.BALANCED;
+        if (mb >= Tier.MEDIUM.minRamMb) return Tier.MEDIUM;
+        if (mb >= Tier.LIGHT.minRamMb) return Tier.LIGHT;
+        return Tier.ULTRA_LIGHT;
     }
 
     public ModelInfo getModelByFileName(String fileName) {

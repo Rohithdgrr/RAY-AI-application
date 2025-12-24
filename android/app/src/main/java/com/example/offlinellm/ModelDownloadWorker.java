@@ -115,8 +115,27 @@ public class ModelDownloadWorker extends Worker {
                 }
             }
 
-            // Encrypt/move - for now we just rename since security is placeholder
-            SecurityHelper.encryptFile(ctx, tempFile, targetFile);
+            // Ensure we have enough space for encryption (size of file * 1.1)
+            long requiredSpace = (long) (tempFile.length() * 1.1);
+            if (targetFile.getParentFile().getUsableSpace() < requiredSpace) {
+                String errorMsg = "Insufficient storage for encryption";
+                Log.e(TAG, errorMsg);
+                manager.onWorkerFailed(fileName, errorMsg);
+                tempFile.delete();
+                return Result.failure(new Data.Builder().putString("error", errorMsg).build());
+            }
+
+            // Encrypt/move
+            try {
+                SecurityHelper.encryptFile(ctx, tempFile, targetFile);
+            } catch (Exception e) {
+                Log.e(TAG, "Encryption failed", e);
+                manager.onWorkerFailed(fileName, "Encryption failed: " + e.getMessage());
+                tempFile.delete();
+                if (targetFile.exists()) targetFile.delete();
+                return Result.failure(new Data.Builder().putString("error", "Encryption failed").build());
+            }
+            
             tempFile.delete();
             
             Log.d(TAG, "Model saved to: " + targetFile.getAbsolutePath());

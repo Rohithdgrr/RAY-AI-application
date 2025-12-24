@@ -57,6 +57,21 @@
                     app:chipMinTouchTargetSize="0dp"
                     app:ensureMinTouchTargetSize="false" />
 
+                <!-- Usage Chip -->
+                <com.google.android.material.chip.Chip
+                    android:id="@+id/usageChip"
+                    android:layout_width="wrap_content"
+                    android:layout_height="24dp"
+                    android:layout_marginTop="2dp"
+                    android:text="Text Generation"
+                    android:textSize="10sp"
+                    android:textColor="@color/text_primary"
+                    app:chipBackgroundColor="@color/surface_variant"
+                    app:chipCornerRadius="8dp"
+                    app:chipMinHeight="24dp"
+                    app:chipMinTouchTargetSize="0dp"
+                    app:ensureMinTouchTargetSize="false" />
+
             </LinearLayout>
 
             <!-- Status Icon (Downloaded indicator) -->

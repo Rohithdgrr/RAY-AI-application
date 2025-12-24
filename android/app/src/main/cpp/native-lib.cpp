@@ -4,6 +4,7 @@
 #include <thread>
 #include <mutex>
 #include <android/log.h>
+#include <atomic>
 
 #include "llama.h"
 
@@ -18,8 +19,8 @@ struct LlamaContextWrapper {
     llama_context * ctx = nullptr;
     llama_sampler * smpl = nullptr;
     uint32_t n_past = 0;
-    bool should_abort = false;
-    bool is_generating = false;
+    std::atomic<bool> should_abort{false};
+    std::atomic<bool> is_generating{false};
     std::mutex mtx;
 };
 
@@ -47,11 +48,11 @@ Java_com_example_offlinellm_LlamaInference_nativeInit(JNIEnv *env, jobject thiz,
     const int n_ctx_val = 4096; // Increased context
     llama_context_params ctx_params = llama_context_default_params();
     ctx_params.n_ctx = n_ctx_val;
-    ctx_params.n_batch = 2048; // Double logical batch for faster ingestion
-    ctx_params.n_ubatch = 1024; // Physical batch
+    ctx_params.n_batch = 512;  // Conservative batch size to avoid decode errors
+    ctx_params.n_ubatch = 256; // Conservative physical batch
     ctx_params.n_threads = std::max(1u, std::thread::hardware_concurrency());
     ctx_params.n_threads_batch = std::max(1u, std::thread::hardware_concurrency());
-    ctx_params.flash_attn_type = LLAMA_FLASH_ATTN_TYPE_ENABLED; 
+    ctx_params.flash_attn_type = LLAMA_FLASH_ATTN_TYPE_DISABLED;  // Disable flash attention for stability
     ctx_params.type_k = GGML_TYPE_F16; // Faster precision
     ctx_params.type_v = GGML_TYPE_F16;
     

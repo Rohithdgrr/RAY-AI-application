@@ -5,7 +5,7 @@
     android:layout_height="wrap_content"
     android:orientation="vertical"
     android:paddingHorizontal="12dp"
-    android:paddingVertical="6dp">
+    android:paddingVertical="8dp">
 
     <!-- User Message Container (Right aligned) -->
     <LinearLayout
@@ -20,69 +20,72 @@
             android:id="@+id/bubbleLayout"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:maxWidth="280dp"
-            app:cardCornerRadius="18dp"
-            app:cardElevation="0dp"
+            android:maxWidth="300dp"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="2dp"
             app:cardBackgroundColor="@color/bubble_user_bg">
 
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:paddingHorizontal="14dp"
-                android:paddingVertical="10dp">
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="12dp">
 
                 <TextView
                     android:id="@+id/messageText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textColor="@color/bubble_user_text"
-                    android:textSize="15sp"
-                    android:lineSpacingExtra="2dp"
+                    android:textSize="16sp"
+                    android:lineSpacingExtra="3dp"
                     android:autoLink="web|email|phone" />
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- User Message Actions: Copy, Edit -->
+        <!-- User Message Actions -->
         <LinearLayout
             android:id="@+id/userActionsLayout"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginTop="4dp"
-            android:gravity="end">
+            android:layout_marginTop="6dp"
+            android:gravity="end"
+            android:alpha="0.7">
 
             <ImageButton
                 android:id="@+id/btnUserCopy"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
                 android:src="@drawable/ic_action_copy"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:scaleType="centerInside"
                 android:padding="6dp"
-                android:contentDescription="Copy" />
+                android:contentDescription="Copy"
+                android:tint="@color/text_secondary" />
 
             <ImageButton
                 android:id="@+id/btnUserEdit"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
                 android:src="@drawable/ic_action_edit"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:scaleType="centerInside"
                 android:padding="6dp"
-                android:contentDescription="Edit" />
+                android:contentDescription="Edit"
+                android:tint="@color/text_secondary" />
+
+            <TextView
+                android:id="@+id/userTimestamp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="10sp"
+                android:textColor="@color/text_tertiary"
+                android:layout_marginStart="8dp"
+                android:layout_gravity="center_vertical" />
 
         </LinearLayout>
-
-        <!-- User Timestamp -->
-        <TextView
-            android:id="@+id/userTimestamp"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textSize="9sp"
-            android:textColor="@color/text_tertiary"
-            android:layout_marginTop="2dp" />
 
     </LinearLayout>
 
@@ -95,37 +98,138 @@
         android:gravity="start"
         android:visibility="gone">
 
+        <!-- AI Label Row -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical"
+            android:layout_marginBottom="6dp"
+            android:layout_marginStart="4dp">
+
+            <ImageView
+                android:layout_width="18dp"
+                android:layout_height="18dp"
+                android:src="@drawable/ray_ai_logo"
+                android:layout_marginEnd="6dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="RAY AI"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:textColor="@color/primary"
+                android:letterSpacing="0.05" />
+
+        </LinearLayout>
+
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/aiBubbleLayout"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:maxWidth="300dp"
-            app:cardCornerRadius="18dp"
-            app:cardElevation="0dp"
+            android:maxWidth="320dp"
+            app:cardCornerRadius="20dp"
+            app:cardElevation="3dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="@color/primary_light"
             app:cardBackgroundColor="@color/bubble_ai_bg">
 
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:paddingHorizontal="14dp"
-                android:paddingVertical="10dp">
+                android:paddingHorizontal="16dp"
+                android:paddingVertical="14dp">
 
-                <!-- Typing Indicator -->
-                <ProgressBar
-                    android:id="@+id/typingIndicator"
-                    android:layout_width="40dp"
-                    android:layout_height="24dp"
-                    android:indeterminate="true"
-                    android:visibility="gone" />
+                <!-- Thinking / Loading State -->
+                <LinearLayout
+                    android:id="@+id/thinkingLayout"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:visibility="gone">
+                    
+                    <ProgressBar
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:indeterminate="true"
+                        android:layout_marginEnd="8dp"
+                        android:indeterminateTint="@color/primary" />
+                        
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Thinking..."
+                        android:textSize="14sp"
+                        android:textColor="@color/text_secondary"
+                          android:textStyle="italic" />
+                </LinearLayout>
+
+                <!-- Reasoning / Thought Block -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/thoughtContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    app:cardCornerRadius="12dp"
+                    app:cardElevation="0dp"
+                    app:strokeWidth="1dp"
+                    app:strokeColor="#E0E0E0"
+                    app:cardBackgroundColor="#F8F9FA"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:padding="12dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal"
+                            android:gravity="center_vertical"
+                            android:layout_marginBottom="4dp">
+
+                            <ImageView
+                                android:layout_width="14dp"
+                                android:layout_height="14dp"
+                                android:src="@drawable/ic_action_think"
+                                android:layout_marginEnd="6dp"
+                                android:tint="@color/text_secondary" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Thought Process"
+                                android:textSize="12sp"
+                                android:textStyle="bold"
+                                android:textColor="@color/text_secondary"
+                                android:textAllCaps="true"
+                                android:letterSpacing="0.05" />
+                        </LinearLayout>
+
+                        <TextView
+                            android:id="@+id/thoughtText"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="13sp"
+                            android:lineSpacingExtra="2dp"
+                            android:textStyle="italic" />
+
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
 
                 <TextView
                     android:id="@+id/aiMessageText"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:textColor="@color/bubble_ai_text"
-                    android:textSize="15sp"
-                    android:lineSpacingExtra="2dp"
+                    android:textSize="16sp"
+                    android:lineSpacingExtra="4dp"
                     android:autoLink="web|email|phone" />
 
                 <!-- Code Blocks Container -->
@@ -134,73 +238,79 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
+                    android:layout_marginTop="8dp"
                     android:visibility="gone" />
 
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- AI Message Actions: Copy, Download, Retry, Make Long, Make Short -->
+        <!-- AI Message Actions -->
         <LinearLayout
             android:id="@+id/aiActionsLayout"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginTop="4dp"
-            android:gravity="start">
+            android:layout_marginTop="8dp"
+            android:gravity="start"
+            android:alpha="0.8">
 
             <ImageButton
                 android:id="@+id/btnAiCopy"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
                 android:src="@drawable/ic_action_copy"
-                android:background="?attr/selectableItemBackgroundBorderless"
+                android:background="@drawable/bg_action_chip"
                 android:scaleType="centerInside"
                 android:padding="6dp"
+                android:layout_marginEnd="8dp"
                 android:contentDescription="Copy"
                 android:tint="@color/text_secondary" />
 
             <ImageButton
                 android:id="@+id/btnAiDownload"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
                 android:src="@drawable/ic_action_download"
-                android:background="?attr/selectableItemBackgroundBorderless"
+                android:background="@drawable/bg_action_chip"
                 android:scaleType="centerInside"
                 android:padding="6dp"
+                android:layout_marginEnd="8dp"
                 android:contentDescription="Download"
                 android:tint="@color/text_secondary" />
 
             <ImageButton
                 android:id="@+id/btnAiRetry"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
                 android:src="@drawable/ic_action_retry"
-                android:background="?attr/selectableItemBackgroundBorderless"
+                android:background="@drawable/bg_action_chip"
                 android:scaleType="centerInside"
                 android:padding="6dp"
+                android:layout_marginEnd="8dp"
                 android:contentDescription="Regenerate"
                 android:tint="@color/text_secondary" />
 
             <ImageButton
                 android:id="@+id/btnAiLonger"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
                 android:src="@drawable/ic_action_longer"
-                android:background="?attr/selectableItemBackgroundBorderless"
+                android:background="@drawable/bg_action_chip"
                 android:scaleType="centerInside"
                 android:padding="6dp"
-                android:contentDescription="Make Longer"
+                android:layout_marginEnd="8dp"
+                android:contentDescription="More detail"
                 android:tint="@color/text_secondary" />
 
             <ImageButton
                 android:id="@+id/btnAiShorter"
-                android:layout_width="32dp"
-                android:layout_height="32dp"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
                 android:src="@drawable/ic_action_shorter"
-                android:background="?attr/selectableItemBackgroundBorderless"
+                android:background="@drawable/bg_action_chip"
                 android:scaleType="centerInside"
                 android:padding="6dp"
-                android:contentDescription="Make Shorter"
+                android:contentDescription="Summarize"
                 android:tint="@color/text_secondary" />
 
         </LinearLayout>
@@ -211,23 +321,24 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginTop="2dp"
-            android:gravity="center_vertical">
+            android:layout_marginTop="4dp"
+            android:gravity="center_vertical"
+            android:alpha="0.6">
 
             <TextView
                 android:id="@+id/aiTimestamp"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="9sp"
+                android:textSize="10sp"
                 android:textColor="@color/text_tertiary" />
 
             <TextView
                 android:id="@+id/responseTimeText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:textSize="9sp"
+                android:textSize="10sp"
                 android:textColor="@color/text_tertiary"
-                android:layout_marginStart="8dp"
+                android:layout_marginStart="12dp"
                 android:visibility="gone" />
 
         </LinearLayout>

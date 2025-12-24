@@ -28,7 +28,11 @@ public class ModelBottomSheet extends BottomSheetDialogFragment implements Model
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        modelManager = ModelManager.getInstance(getContext());
+        if (getContext() != null) {
+            modelManager = ModelManager.getInstance(getContext());
+        } else {
+            throw new IllegalStateException("Context not available in ModelBottomSheet onCreate");
+        }
         mainHandler = new Handler(Looper.getMainLooper());
     }
 

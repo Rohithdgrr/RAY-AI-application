@@ -45,8 +45,8 @@ public class SecurityHelper {
         ).build();
 
         try (InputStream in = encFile.openFileInput();
-             OutputStream out = new FileOutputStream(targetFile)) {
-            byte[] buffer = new byte[8192];
+               OutputStream out = new FileOutputStream(targetFile)) {
+            byte[] buffer = new byte[65536]; // 64KB buffer for faster I/O
             int length;
             while ((length = in.read(buffer)) > 0) {
                 out.write(buffer, 0, length);

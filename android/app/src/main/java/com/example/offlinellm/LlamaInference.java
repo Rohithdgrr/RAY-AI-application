@@ -79,6 +79,27 @@ public class LlamaInference implements InferenceEngine {
 
     @Override
     public void generate(String prompt, Callback callback) {
+        if (callback == null) {
+            Log.e(TAG, "Callback is null");
+            return;
+        }
+        
+        if (prompt == null || prompt.trim().isEmpty()) {
+            callback.onError("Prompt cannot be empty");
+            return;
+        }
+
+        // Apply basic Chat Template if not present
+        String formattedPrompt = prompt;
+        if (!prompt.contains("<|im_start|>") && !prompt.contains("[INST]") && !prompt.contains("<|user|>")) {
+            // Default to ChatML-like template which works for many modern GGUFs (Qwen, Llama 3.2, etc.)
+            formattedPrompt = "<|im_start|>system\nYou are RAY AI, a high-quality, helpful, and professional AI assistant created by ROT. Provide accurate, detailed, and perfectly formatted responses.<|im_end|>\n" +
+                             "<|im_start|>user\n" + prompt + "<|im_end|>\n" +
+                             "<|im_start|>assistant\n";
+        }
+        
+        final String finalPrompt = formattedPrompt;
+        
         synchronized (lock) {
             if (contextPointer == 0) {
                 callback.onError("Model not loaded");
@@ -104,10 +125,38 @@ public class LlamaInference implements InferenceEngine {
                     }
                 }
                 
-                nativeGenerate(currentPtr, prompt, new NativeCallback() {
+                nativeGenerate(currentPtr, finalPrompt, new NativeCallback() {
+                    private boolean inThought = false;
+                    private StringBuilder currentThought = new StringBuilder();
+
                     @Override
                     public void onToken(String token) {
-                        if (!stopRequested) {
+                        if (stopRequested || token == null || token.isEmpty()) return;
+
+                        if (token.contains("<thought>")) {
+                            inThought = true;
+                            String after = token.substring(token.indexOf("<thought>") + 9);
+                            if (!after.isEmpty()) {
+                                callback.onThought(after);
+                                currentThought.append(after);
+                            }
+                            return;
+                        }
+
+                        if (token.contains("</thought>")) {
+                            inThought = false;
+                            String before = token.substring(0, token.indexOf("</thought>"));
+                            if (!before.isEmpty()) {
+                                callback.onThought(before);
+                                currentThought.append(before);
+                            }
+                            return;
+                        }
+
+                        if (inThought) {
+                            callback.onThought(token);
+                            currentThought.append(token);
+                        } else {
                             callback.onToken(token);
                         }
                     }
@@ -121,10 +170,21 @@ public class LlamaInference implements InferenceEngine {
                             callback.onComplete();
                         }
                     }
+
+                    @Override
+                    public void onError(String message) {
+                        synchronized (lock) {
+                            isGenerating = false;
+                        }
+                        callback.onError(message);
+                    }
                 });
             } catch (Exception e) {
                 Log.e(TAG, "Generation failed", e);
-                callback.onError(e.getMessage());
+                callback.onError(e.getMessage() != null ? e.getMessage() : "Generation failed");
+                synchronized (lock) {
+                    isGenerating = false;
+                }
             } finally {
                 synchronized (lock) {
                     isGenerating = false;
@@ -138,6 +198,9 @@ public class LlamaInference implements InferenceEngine {
     public void stop() {
         synchronized (lock) {
             stopRequested = true;
+            if (contextPointer != 0) {
+                nativeStop(contextPointer);
+            }
             isGenerating = false;
         }
     }
@@ -155,6 +218,15 @@ public class LlamaInference implements InferenceEngine {
     }
 
     @Override
+    public void clearHistory() {
+        synchronized (lock) {
+            if (contextPointer != 0) {
+                nativeClearKV(contextPointer);
+            }
+        }
+    }
+
+    @Override
     public boolean isLoaded() {
         return contextPointer != 0;
     }
@@ -162,10 +234,13 @@ public class LlamaInference implements InferenceEngine {
     // JNI Methods
     private native long nativeInit(String modelPath);
     private native void nativeGenerate(long ptr, String prompt, NativeCallback cb);
+    private native void nativeClearKV(long ptr);
+    private native void nativeStop(long ptr);
     private native void nativeFree(long ptr);
 
     public interface NativeCallback {
         void onToken(String token);
         void onComplete();
+        void onError(String message);
     }
 }

@@ -1,5 +1,6 @@
 package com.example.offlinellm;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -52,7 +53,12 @@ public class HomeFragment extends Fragment {
         adapter.setOnChatActionListener(new ChatAdapter.OnChatActionListener() {
             @Override
             public void onCopy(ChatMessage message) {
-                // Handled by adapter default
+                if (getContext() != null) {
+                    android.content.ClipboardManager clipboard = (android.content.ClipboardManager) getContext().getSystemService(android.content.Context.CLIPBOARD_SERVICE);
+                    android.content.ClipData clip = android.content.ClipData.newPlainText("RAY AI Message", message.getText());
+                    clipboard.setPrimaryClip(clip);
+                    Toast.makeText(getContext(), "Copied to clipboard", Toast.LENGTH_SHORT).show();
+                }
             }
 
             @Override
@@ -67,7 +73,13 @@ public class HomeFragment extends Fragment {
 
             @Override
             public void onDownload(ChatMessage message) {
-                // Handled by adapter default (share)
+                if (getContext() != null) {
+                    Intent shareIntent = new Intent(Intent.ACTION_SEND);
+                    shareIntent.setType("text/plain");
+                    shareIntent.putExtra(Intent.EXTRA_TEXT, message.getText());
+                    getContext().startActivity(Intent.createChooser(shareIntent, "Share RAY AI Response"));
+                    Toast.makeText(getContext(), "Preparing share...", Toast.LENGTH_SHORT).show();
+                }
             }
 
             @Override
@@ -134,7 +146,7 @@ public class HomeFragment extends Fragment {
         return view;
     }
 
-    private void loadActiveSession() {
+    public void loadActiveSession() {
         currentSession = historyManager.getActiveSession();
         if (currentSession != null) {
             messages.clear();

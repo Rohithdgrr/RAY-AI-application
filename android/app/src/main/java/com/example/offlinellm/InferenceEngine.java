@@ -6,6 +6,7 @@ import java.io.File;
 public interface InferenceEngine {
     interface Callback {
         void onToken(String token);
+        default void onThought(String thought) {}
         void onComplete();
         void onError(String message);
     }
@@ -15,6 +16,7 @@ public interface InferenceEngine {
     void stop();
     void unload();
     boolean isLoaded();
+    default void clearHistory() {}
 
     static InferenceEngine getForFile(Context context, File file) {
         String name = file.getName().toLowerCase();

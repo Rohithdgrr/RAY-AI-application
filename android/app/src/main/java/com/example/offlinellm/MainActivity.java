@@ -6,11 +6,13 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.util.Log;
 import android.widget.TextView;
+import android.widget.ImageButton;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.snackbar.Snackbar;
 import androidx.coordinatorlayout.widget.CoordinatorLayout;
+import androidx.appcompat.widget.Toolbar;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
@@ -33,6 +35,7 @@ public class MainActivity extends AppCompatActivity implements ModelManager.Down
     private boolean isGenerating = false;
     private InferenceEngine.Callback currentGenerationCallback;
     private TextView toolbarTitle;
+    private androidx.appcompat.widget.Toolbar appToolbar;
     private CoordinatorLayout rootContainer;
     private TextView modelNameText;
     private BottomNavigationView bottomNav;
@@ -40,6 +43,9 @@ public class MainActivity extends AppCompatActivity implements ModelManager.Down
     private RecyclerView drawerHistoryRecycler;
     private DrawerHistoryAdapter drawerHistoryAdapter;
     private String currentModelName = "Not loaded";
+    private HomeFragment homeFragment;
+    private ModelsFragment modelsFragment;
+    private Fragment activeFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,27 +53,35 @@ public class MainActivity extends AppCompatActivity implements ModelManager.Down
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main_new);
 
-        drawerLayout = findViewById(R.id.drawerLayout);
         rootContainer = findViewById(R.id.rootContainer);
 
+        appToolbar = findViewById(R.id.toolbar);
         toolbarTitle = findViewById(R.id.toolbarTitle);
         modelNameText = findViewById(R.id.modelNameText);
+        ImageButton btnNewChat = findViewById(R.id.btnNewChat);
+        View btnInfo = findViewById(R.id.btnInfo);
         bottomNav = findViewById(R.id.bottom_navigation);
 
         modelManager = ModelManager.getInstance(this);
         modelManager.addProgressListener(this);
         historyManager = ChatHistoryManager.getInstance(this);
 
-        // Setup drawer
-        setupDrawer();
+        // Initialize fallback engine so responses work even without a downloaded model
+        engine = new FallbackInferenceEngine(this);
+        try {
+            engine.loadModel(null);
+        } catch (Exception ignored) {}
+
+        homeFragment = new HomeFragment();
+        modelsFragment = new ModelsFragment();
 
         bottomNav.setOnNavigationItemSelectedListener(item -> {
             int id = item.getItemId();
             if (id == R.id.nav_home) {
-                showFragment(new HomeFragment(), "Home");
+                switchFragment(homeFragment, "RAY AI");
                 return true;
             } else if (id == R.id.nav_models) {
-                showFragment(new ModelsFragment(), "Models");
+                switchFragment(modelsFragment, "Models");
                 return true;
             }
             return false;
@@ -75,83 +89,39 @@ public class MainActivity extends AppCompatActivity implements ModelManager.Down
 
         // Load default fragment
         if (savedInstanceState == null) {
-            showFragment(new HomeFragment(), "Home");
+            getSupportFragmentManager().beginTransaction()
+                    .add(R.id.fragment_container, modelsFragment, "Models").hide(modelsFragment)
+                    .add(R.id.fragment_container, homeFragment, "Home")
+                    .commit();
+            activeFragment = homeFragment;
+            if (toolbarTitle != null) toolbarTitle.setText("RAY AI");
         }
 
         scanAndLoadBestModel();
         
-        findViewById(R.id.btnNewChat).setOnClickListener(v -> createNewChat());
-        findViewById(R.id.btnQuickActions).setOnClickListener(v -> toggleDrawer());
+        if (btnNewChat != null) btnNewChat.setOnClickListener(v -> createNewChat());
+        if (btnInfo != null) btnInfo.setOnClickListener(v -> showInfoDialog());
     }
 
-    private void setupDrawer() {
-        // New Chat button in drawer
-        MaterialButton drawerNewChat = findViewById(R.id.drawerNewChat);
-        if (drawerNewChat != null) {
-            drawerNewChat.setOnClickListener(v -> {
-                drawerLayout.closeDrawer(GravityCompat.START);
-                createNewChat();
-            });
-        }
-
-        // View All History button
-        MaterialButton drawerViewAllHistory = findViewById(R.id.drawerViewAllHistory);
-        if (drawerViewAllHistory != null) {
-            drawerViewAllHistory.setOnClickListener(v -> {
-                drawerLayout.closeDrawer(GravityCompat.START);
-                startActivity(new Intent(this, ChatHistoryActivity.class));
-            });
-        }
-
-        // Setup recent chats RecyclerView
-        drawerHistoryRecycler = findViewById(R.id.drawerHistoryRecycler);
-        if (drawerHistoryRecycler != null) {
-            drawerHistoryRecycler.setLayoutManager(new LinearLayoutManager(this));
-            drawerHistoryAdapter = new DrawerHistoryAdapter(new ArrayList<>(), session -> {
-                drawerLayout.closeDrawer(GravityCompat.START);
-                historyManager.setActiveSession(session.getId());
-                showHome();
-            });
-            drawerHistoryRecycler.setAdapter(drawerHistoryAdapter);
-            loadRecentChats();
-        }
+    private void showInfoDialog() {
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
+                .setTitle("About RAY AI")
+                .setMessage("RAY AI ORCHID v1.0\nCreated by ROT\n\nA professional offline AI assistant running locally on your device.")
+                .setPositiveButton("OK", null)
+                .show();
     }
 
-    private void loadRecentChats() {
-        if (drawerHistoryAdapter != null) {
-            List<ChatSession> sessions = historyManager.getActiveSessions();
-            // Limit to 10 recent chats for the drawer
-            List<ChatSession> recentSessions = sessions.size() > 10 ? 
-                sessions.subList(0, 10) : sessions;
-            drawerHistoryAdapter.updateSessions(recentSessions);
-        }
-    }
-
-    private void toggleDrawer() {
-        if (drawerLayout == null) {
-            Log.e("MainActivity", "drawerLayout is null!");
-            return;
-        }
+    private void switchFragment(Fragment fragment, String title) {
+        if (activeFragment == fragment) return;
         
-        try {
-            if (drawerLayout.isDrawerOpen(GravityCompat.START)) {
-                drawerLayout.closeDrawer(GravityCompat.START);
-            } else {
-                loadRecentChats(); // Refresh recent chats before opening
-                drawerLayout.openDrawer(GravityCompat.START);
-                Log.d("MainActivity", "Drawer opened");
-            }
-        } catch (Exception e) {
-            Log.e("MainActivity", "Error toggling drawer", e);
-        }
-    }
-
-    private void showFragment(Fragment fragment, String title) {
         getSupportFragmentManager().beginTransaction()
-                .replace(R.id.fragment_container, fragment)
+                .hide(activeFragment)
+                .show(fragment)
                 .commit();
+        activeFragment = fragment;
+        
         if (toolbarTitle != null) {
-            toolbarTitle.setText(title.equals("Home") ? "RAY AI" : title);
+            toolbarTitle.setText(title);
         }
     }
 
@@ -161,14 +131,34 @@ public class MainActivity extends AppCompatActivity implements ModelManager.Down
 
     private void createNewChat() {
         historyManager.createNewSession();
-        showHome(); // Refresh home with new context
+        if (engine != null) {
+            engine.clearHistory();
+        }
+        // Refresh home fragment data
+        if (homeFragment != null) {
+            homeFragment.loadActiveSession();
+        }
+        showHome();
         showSnack("New chat started");
-        loadRecentChats(); // Update drawer
     }
 
     public boolean handleChatMessage(String prompt, List<ChatMessage> messages, ChatAdapter adapter, RecyclerView recyclerView) {
         if (engine == null || !engine.isLoaded()) {
+            // Try fallback engine
+            if (!(engine instanceof FallbackInferenceEngine)) {
+                try {
+                    engine = new FallbackInferenceEngine(this);
+                    engine.loadModel(null);
+                } catch (Exception ignored) {}
+            }
+        }
+        if (engine == null || !engine.isLoaded()) {
             showSnack("Model not ready. Please go to Models to download/load one.");
+            return false;
+        }
+
+        if (prompt == null || prompt.trim().isEmpty()) {
+            showSnack("Please enter a message");
             return false;
         }
 
@@ -182,13 +172,32 @@ public class MainActivity extends AppCompatActivity implements ModelManager.Down
         isGenerating = true;
 
         currentGenerationCallback = new InferenceEngine.Callback() {
+            private boolean isFirstToken = true;
+
             @Override
             public void onToken(String token) {
-                runOnUiThread(() -> {
-                    responseMessage.setText(responseMessage.getText() + token);
-                    adapter.notifyItemChanged(responseIndex);
-                    recyclerView.scrollToPosition(responseIndex);
-                });
+                if (token != null) {
+                    runOnUiThread(() -> {
+                        if (isFirstToken) {
+                            responseMessage.setText(token);
+                            isFirstToken = false;
+                        } else {
+                            responseMessage.setText(responseMessage.getText() + token);
+                        }
+                        adapter.notifyItemChanged(responseIndex);
+                        recyclerView.scrollToPosition(responseIndex);
+                    });
+                }
+            }
+
+            @Override
+            public void onThought(String thought) {
+                if (thought != null) {
+                    runOnUiThread(() -> {
+                        responseMessage.setThought(responseMessage.getThought() + thought);
+                        adapter.notifyItemChanged(responseIndex);
+                    });
+                }
             }
 
             @Override
@@ -209,16 +218,15 @@ public class MainActivity extends AppCompatActivity implements ModelManager.Down
                     if (fragment instanceof HomeFragment) {
                         ((HomeFragment) fragment).onGenerationComplete();
                     }
-                    
-                    loadRecentChats(); // Update drawer with new chat content
                 });
             }
 
             @Override
             public void onError(String message) {
                 runOnUiThread(() -> {
-                    showSnack("Error: " + message);
-                    responseMessage.setText("Error: " + message);
+                    String errorMsg = message != null ? message : "Unknown error";
+                    showSnack("Error: " + errorMsg);
+                    responseMessage.setText("Error: " + errorMsg);
                     responseMessage.finishGeneration();
                     adapter.notifyItemChanged(responseIndex);
                     isGenerating = false;
@@ -231,17 +239,29 @@ public class MainActivity extends AppCompatActivity implements ModelManager.Down
             }
         };
 
-        engine.generate(prompt, currentGenerationCallback);
+        try {
+            engine.generate(prompt, currentGenerationCallback);
+        } catch (Exception e) {
+            isGenerating = false;
+            showSnack("Generation failed: " + e.getMessage());
+            messages.remove(responseIndex);
+            adapter.notifyItemRemoved(responseIndex);
+            return false;
+        }
         return true;
     }
 
     public void loadModel(ModelManager.ModelInfo model) {
-        if (engine != null) engine.unload();
         new Thread(() -> {
             try {
                 File modelFile = new File(getFilesDir(), model.fileName);
-                engine = InferenceEngine.getForFile(this, modelFile);
-                engine.loadModel(modelFile);
+                InferenceEngine newEngine = InferenceEngine.getForFile(this, modelFile);
+                newEngine.loadModel(modelFile);
+                
+                // Only swap engine after successful load
+                if (engine != null) engine.unload();
+                engine = newEngine;
+                
                 currentModelName = model.name;
                 runOnUiThread(() -> {
                     if (modelNameText != null) {
@@ -250,6 +270,14 @@ public class MainActivity extends AppCompatActivity implements ModelManager.Down
                     showSnack(model.name + " ready");
                 });
             } catch (Exception e) {
+                // Keep existing engine if possible, otherwise fallback
+                if (engine == null || !engine.isLoaded()) {
+                    try {
+                        engine = new FallbackInferenceEngine(this);
+                        engine.loadModel(null);
+                    } catch (Exception ignored) {}
+                }
+
                 currentModelName = "Error";
                 runOnUiThread(() -> {
                     if (modelNameText != null) {
@@ -284,7 +312,13 @@ public class MainActivity extends AppCompatActivity implements ModelManager.Down
 
     private void showSnack(String message) {
         if (rootContainer != null) {
-            Snackbar.make(rootContainer, message, Snackbar.LENGTH_LONG).show();
+            com.google.android.material.snackbar.Snackbar sb = com.google.android.material.snackbar.Snackbar
+                    .make(rootContainer, message, com.google.android.material.snackbar.Snackbar.LENGTH_LONG)
+                    .setAnimationMode(com.google.android.material.snackbar.Snackbar.ANIMATION_MODE_SLIDE);
+            if (appToolbar != null) sb.setAnchorView(appToolbar);
+            sb.setBackgroundTint(getColor(R.color.surface_elevated));
+            sb.setTextColor(getColor(R.color.text_primary));
+            sb.show();
         }
     }
 
@@ -309,7 +343,6 @@ public class MainActivity extends AppCompatActivity implements ModelManager.Down
     @Override
     protected void onResume() {
         super.onResume();
-        loadRecentChats();
     }
 
     @Override

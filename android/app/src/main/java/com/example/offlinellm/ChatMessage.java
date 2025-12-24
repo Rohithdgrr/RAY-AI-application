@@ -9,13 +9,17 @@ public class ChatMessage {
     private String text;
     private long timestamp;
     private String modelName;
+    private String thought;
+    private long startTimeMs;
     private long responseTimeMs;
     private boolean isGenerating;
 
     public ChatMessage(String sender, String text) {
         this.sender = sender;
         this.text = text;
+        this.thought = "";
         this.timestamp = System.currentTimeMillis();
+        this.startTimeMs = 0;
         this.responseTimeMs = 0;
         this.isGenerating = false;
     }
@@ -29,6 +33,8 @@ public class ChatMessage {
     public String getSender() { return sender; }
     public String getText() { return text; }
     public void setText(String text) { this.text = text; }
+    public String getThought() { return thought; }
+    public void setThought(String thought) { this.thought = thought; }
     public long getTimestamp() { return timestamp; }
     public String getModelName() { return modelName; }
     public void setModelName(String modelName) { this.modelName = modelName; }
@@ -48,13 +54,21 @@ public class ChatMessage {
     }
 
     public String getFormattedResponseTime() {
-        if (responseTimeMs < 1000) {
-            return responseTimeMs + "ms";
-        } else if (responseTimeMs < 60000) {
-            return String.format(Locale.getDefault(), "%.1fs", responseTimeMs / 1000.0);
+        long displayTime = responseTimeMs;
+        if (isGenerating && startTimeMs > 0) {
+            displayTime = System.currentTimeMillis() - startTimeMs;
+        }
+        
+        if (displayTime <= 0) return "";
+        
+        if (displayTime < 1000) {
+            return displayTime + "ms";
+        } else if (displayTime < 60000) {
+            return String.format(Locale.getDefault(), "%.1fs", displayTime / 1000.0);
         } else {
-            long minutes = responseTimeMs / 60000;
-            long seconds = (responseTimeMs % 60000) / 1000;
+            long minutes = displayTime / 60000;
+            long seconds = (displayTime % 60000) / 1000;
+            if (minutes > 1440) return ""; // Filter out ridiculous values
             return String.format(Locale.getDefault(), "%dm %ds", minutes, seconds);
         }
     }
@@ -65,12 +79,13 @@ public class ChatMessage {
 
     public void startGeneration() {
         this.isGenerating = true;
-        this.responseTimeMs = System.currentTimeMillis();
+        this.startTimeMs = System.currentTimeMillis();
+        this.responseTimeMs = 0;
     }
 
     public void finishGeneration() {
-        if (isGenerating) {
-            this.responseTimeMs = System.currentTimeMillis() - responseTimeMs;
+        if (isGenerating && startTimeMs > 0) {
+            this.responseTimeMs = System.currentTimeMillis() - startTimeMs;
             this.isGenerating = false;
         }
     }

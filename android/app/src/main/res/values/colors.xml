@@ -93,4 +93,5 @@
     <color name="tier_medium">#ff6700</color>
     <color name="tier_light">#ff8100</color>
     <color name="tier_ultra_light">#ffa700</color>
+    <color name="primary_translucent">#33FF5722</color>
 </resources>

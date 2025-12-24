@@ -113,8 +113,9 @@ public class ModelAdapter extends RecyclerView.Adapter<ModelAdapter.ViewHolder> 
             default:
                 badgeColor = holder.itemView.getContext().getColor(R.color.primary);
         }
-        holder.tierBadge.setChipBackgroundColorResource(0);
+        // Apply color without using invalid resource id
         holder.tierBadge.setChipBackgroundColor(android.content.res.ColorStateList.valueOf(badgeColor));
+        if (holder.usageChip != null) holder.usageChip.setText(model.usage != null ? model.usage : "Text Generation");
 
         // Verification check
         if (!model.isDownloaded) {
@@ -185,6 +186,7 @@ public class ModelAdapter extends RecyclerView.Adapter<ModelAdapter.ViewHolder> 
         LinearLayout progressContainer;
         Chip tierBadge;
         ImageView statusIcon;
+        Chip usageChip;
 
         ViewHolder(View view) {
             super(view);
@@ -197,6 +199,7 @@ public class ModelAdapter extends RecyclerView.Adapter<ModelAdapter.ViewHolder> 
             modelProgress = view.findViewById(R.id.modelProgress);
             progressContainer = view.findViewById(R.id.progressContainer);
             tierBadge = view.findViewById(R.id.tierBadge);
+            usageChip = view.findViewById(R.id.usageChip);
             statusIcon = view.findViewById(R.id.statusIcon);
             downloadStatus = view.findViewById(R.id.downloadStatus);
         }

@@ -23,6 +23,16 @@ import java.util.ArrayList;
 import java.util.List;
 import com.example.offlinellm.ModelAdapter;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+
 public class ModelsFragment extends Fragment implements ModelManager.DownloadProgressListener {
 
     private ModelManager modelManager;
@@ -35,7 +45,6 @@ public class ModelsFragment extends Fragment implements ModelManager.DownloadPro
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        modelManager = ModelManager.getInstance(getContext());
         mainHandler = new Handler(Looper.getMainLooper());
     }
 
@@ -45,11 +54,18 @@ public class ModelsFragment extends Fragment implements ModelManager.DownloadPro
         View view = inflater.inflate(R.layout.fragment_models, container, false);
         
         try {
+            // Initialize ModelManager after fragment is properly attached
+            if (getContext() != null) {
+                modelManager = ModelManager.getInstance(getContext());
+            } else {
+                throw new Exception("Fragment context is null");
+            }
+            
             recyclerView = view.findViewById(R.id.modelRecyclerView);
             hfSearchInput = view.findViewById(R.id.hfSearchInput);
             btnHFSearch = view.findViewById(R.id.btnHFSearch);
             
-            if (recyclerView != null) {
+            if (recyclerView != null && getContext() != null) {
                 recyclerView.setLayoutManager(new LinearLayoutManager(getContext()));
                 // Display only mobile-compatible models (LIGHT and ULTRA_LIGHT tiers)
                 List<ModelManager.ModelInfo> models = modelManager.getMobileCompatibleModels();
@@ -57,9 +73,16 @@ public class ModelsFragment extends Fragment implements ModelManager.DownloadPro
                     models = new ArrayList<>();
                 }
                 adapter = new ModelAdapter(models, modelManager, model -> {
-                    if (getActivity() instanceof MainActivity) {
-                        ((MainActivity) getActivity()).loadModel(model);
-                        ((MainActivity) getActivity()).showHome();
+                    if (getActivity() instanceof MainActivity && model != null) {
+                        try {
+                            ((MainActivity) getActivity()).loadModel(model);
+                            ((MainActivity) getActivity()).showHome();
+                        } catch (Exception e) {
+                            android.util.Log.e("ModelsFragment", "Error loading model", e);
+                            if (getContext() != null) {
+                                Toast.makeText(getContext(), "Error loading model: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                            }
+                        }
                     }
                 });
                 recyclerView.setAdapter(adapter);
@@ -81,18 +104,205 @@ public class ModelsFragment extends Fragment implements ModelManager.DownloadPro
     @Override
     public void onResume() {
         super.onResume();
-        modelManager.addProgressListener(this);
-        modelManager.scanForExistingModels();
+        if (modelManager != null) {
+            modelManager.addProgressListener(this);
+            modelManager.scanForExistingModels();
+        }
         if (adapter != null) adapter.notifyDataSetChanged();
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        modelManager.removeProgressListener(this);
+        if (modelManager != null) {
+            modelManager.removeProgressListener(this);
+        }
     }
 
     private void searchHuggingFace() {
+        String query = hfSearchInput.getText().toString().trim();
+        if (query.isEmpty()) {
+            Toast.makeText(getContext(), "Enter a search term", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        
+        if (query.startsWith("http")) {
+            addCustomModelFromUrl(query);
+            return;
+        }
+
+        btnHFSearch.setEnabled(false);
+        btnHFSearch.setText("Searching...");
+
+        new Thread(() -> {
+            try {
+                // HF API search for models with GGUF filter
+                String urlString = "https://huggingface.co/api/models?search=" + Uri.encode(query) + "&filter=gguf&sort=downloads&direction=-1&limit=10";
+                URL url = new URL(urlString);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+                
+                InputStream is = conn.getInputStream();
+                BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) sb.append(line);
+                
+                JsonArray results = JsonParser.parseString(sb.toString()).getAsJsonArray();
+                
+                mainHandler.post(() -> {
+                    if (!isAdded()) return;
+                    if (results.size() == 0) {
+                        Toast.makeText(getContext(), "No repositories found", Toast.LENGTH_SHORT).show();
+                    } else {
+                        showRepoSelectionDialog(results);
+                    }
+                    btnHFSearch.setEnabled(true);
+                    btnHFSearch.setText("Search");
+                });
+                
+            } catch (Exception e) {
+                mainHandler.post(() -> {
+                    Toast.makeText(getContext(), "Search failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    btnHFSearch.setEnabled(true);
+                    btnHFSearch.setText("Search");
+                });
+            }
+        }).start();
+    }
+
+    private void showRepoSelectionDialog(JsonArray repos) {
+        String[] repoNames = new String[repos.size()];
+        for (int i = 0; i < repos.size(); i++) {
+            repoNames[i] = repos.get(i).getAsJsonObject().get("id").getAsString();
+        }
+
+        new MaterialAlertDialogBuilder(getContext())
+                .setTitle("Select Repository")
+                .setItems(repoNames, (dialog, which) -> {
+                    fetchRepoFiles(repos.get(which).getAsJsonObject());
+                })
+                .show();
+    }
+
+    private void fetchRepoFiles(JsonObject repo) {
+        String repoId = repo.get("id").getAsString();
+        Toast.makeText(getContext(), "Fetching files for " + repoId, Toast.LENGTH_SHORT).show();
+
+        new Thread(() -> {
+            try {
+                // Fetch full repo info including siblings (files)
+                String urlString = "https://huggingface.co/api/models/" + repoId;
+                URL url = new URL(urlString);
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("GET");
+
+                InputStream is = conn.getInputStream();
+                BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) sb.append(line);
+
+                JsonObject fullRepo = JsonParser.parseString(sb.toString()).getAsJsonObject();
+                JsonArray siblings = fullRepo.getAsJsonArray("siblings");
+                
+                List<JsonObject> ggufFiles = new ArrayList<>();
+                for (int i = 0; i < siblings.size(); i++) {
+                    JsonObject file = siblings.get(i).getAsJsonObject();
+                    String rfile = file.get("rfile").getAsString();
+                    if (rfile.toLowerCase().endsWith(".gguf")) {
+                        ggufFiles.add(file);
+                    }
+                }
+
+                mainHandler.post(() -> {
+                    if (ggufFiles.isEmpty()) {
+                        Toast.makeText(getContext(), "No GGUF files found in this repo", Toast.LENGTH_SHORT).show();
+                    } else {
+                        showFilePicker(repoId, ggufFiles, fullRepo);
+                    }
+                });
+            } catch (Exception e) {
+                mainHandler.post(() -> Toast.makeText(getContext(), "Failed to fetch files: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+            }
+        }).start();
+    }
+
+    private void showFilePicker(String repoId, List<JsonObject> files, JsonObject repoInfo) {
+        View dialogView = LayoutInflater.from(getContext()).inflate(R.layout.dialog_hf_file_picker, null);
+        TextView repoTitle = dialogView.findViewById(R.id.repoName);
+        RecyclerView rvFiles = dialogView.findViewById(R.id.fileRecyclerView);
+        
+        repoTitle.setText(repoId);
+        rvFiles.setLayoutManager(new LinearLayoutManager(getContext()));
+        
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(getContext())
+                .setView(dialogView)
+                .setNegativeButton("Cancel", null);
+
+        androidx.appcompat.app.AlertDialog dialog = builder.create();
+
+        HuggingFaceFileAdapter fileAdapter = new HuggingFaceFileAdapter(files, file -> {
+            addHuggingFaceModel(repoId, file, repoInfo);
+            dialog.dismiss();
+        });
+        rvFiles.setAdapter(fileAdapter);
+        
+        dialog.show();
+    }
+
+    private void addHuggingFaceModel(String repoId, JsonObject file, JsonObject repoInfo) {
+        String fileName = file.get("rfile").getAsString();
+        long sizeBytes = file.has("size") ? file.get("size").getAsLong() : 0;
+        
+        String displayName = (repoId.contains("/") ? repoId.split("/")[1] : repoId) + " - " + fileName;
+        String downloadUrl = "https://huggingface.co/" + repoId + "/resolve/main/" + fileName;
+        String localEncFile = repoId.replace("/", "_") + "_" + fileName.replace("/", "_") + ".enc";
+
+        // Heuristic: RAM requirement is approx 1.2x file size
+        long estimatedRam = (long) (sizeBytes * 1.2);
+        if (estimatedRam == 0) estimatedRam = 4000L * 1024L * 1024L; // Default 4GB
+
+        String usage = "Text Generation";
+        if (repoInfo.has("tags")) {
+            JsonArray tags = repoInfo.getAsJsonArray("tags");
+            for (int k = 0; k < tags.size(); k++) {
+                String tag = tags.get(k).getAsString().toLowerCase();
+                if (tag.contains("code")) { usage = "Coding"; break; }
+                if (tag.contains("reason")) { usage = "Reasoning"; break; }
+            }
+        }
+
+        ModelManager.ModelInfo info = new ModelManager.ModelInfo(
+                displayName,
+                downloadUrl,
+                localEncFile,
+                "PLACEHOLDER",
+                ModelManager.getTierForRam(estimatedRam),
+                estimatedRam,
+                usage
+        );
+
+        // Check if exists
+        boolean exists = false;
+        for (ModelManager.ModelInfo m : modelManager.getModels()) {
+            if (m.fileName.equals(info.fileName)) {
+                exists = true;
+                break;
+            }
+        }
+        
+        if (!exists) {
+            modelManager.getModels().add(0, info);
+            adapter.notifyItemInserted(0);
+            recyclerView.scrollToPosition(0);
+            Toast.makeText(getContext(), "Model added to library. Click Download to start.", Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(getContext(), "Model already in library", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void searchHuggingFaceOld() {
         String query = hfSearchInput.getText().toString().trim();
         if (query.isEmpty()) {
             Toast.makeText(getContext(), "Enter a search term", Toast.LENGTH_SHORT).show();
@@ -153,13 +363,28 @@ public class ModelsFragment extends Fragment implements ModelManager.DownloadPro
                             String displayName = modelId.contains("/") ? modelId.split("/")[1] : modelId;
                             String downloadUrl = "https://huggingface.co/" + modelId + "/resolve/main/" + fileName;
                             
+                            // Determine usage/category based on name and tags
+                            String usage = "Text Generation";
+                            if (obj.has("tags")) {
+                                com.google.gson.JsonArray tags = obj.getAsJsonArray("tags");
+                                for (int k = 0; k < tags.size(); k++) {
+                                    String tag = tags.get(k).getAsString().toLowerCase();
+                                    if (tag.contains("code")) { usage = "Coding"; break; }
+                                    if (tag.contains("reason")) { usage = "Reasoning"; break; }
+                                    if (tag.contains("summariz")) { usage = "Summarization"; break; }
+                                    if (tag.contains("image") || tag.contains("diffusion")) { usage = "Image Generation"; break; }
+                                    if (tag.contains("vision")) { usage = "Vision"; break; }
+                                }
+                            }
+
                             ModelManager.ModelInfo info = new ModelManager.ModelInfo(
                                 displayName + " (" + fileName + ")",
                                 downloadUrl, 
                                 modelId.replace("/", "_") + "_" + fileName.replace("/", "_") + ".enc",
                                 "PLACEHOLDER",
                                 ModelManager.Tier.BALANCED,
-                                4000L * 1024L * 1024L
+                                4000L * 1024L * 1024L,
+                                usage
                             );
                             
                             // Check if model already in list to avoid duplicates
