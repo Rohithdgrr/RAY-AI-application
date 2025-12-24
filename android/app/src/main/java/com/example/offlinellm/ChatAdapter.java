@@ -17,9 +17,14 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.google.android.material.card.MaterialCardView;
 import java.util.List;
 
+import io.noties.markwon.Markwon;
+import io.noties.markwon.ext.tables.TablePlugin;
+import io.noties.markwon.ext.strikethrough.StrikethroughPlugin;
+
 public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
     private final List<ChatMessage> messages;
     private OnChatActionListener actionListener;
+    private Markwon markwon;
 
     public interface OnChatActionListener {
         void onCopy(ChatMessage message);
@@ -41,6 +46,12 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
     @NonNull
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+        if (markwon == null) {
+            markwon = Markwon.builder(parent.getContext())
+                    .usePlugin(TablePlugin.create(parent.getContext()))
+                    .usePlugin(StrikethroughPlugin.create())
+                    .build();
+        }
         View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_chat, parent, false);
         return new ViewHolder(view);
     }
@@ -51,19 +62,12 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
         boolean isUserMessage = message.getSender().equalsIgnoreCase("You");
 
         if (isUserMessage) {
-            // Show user container, hide AI container
             holder.userMessageContainer.setVisibility(View.VISIBLE);
             holder.aiMessageContainer.setVisibility(View.GONE);
-
-            // Set message text
             holder.messageText.setText(message.getText());
             holder.userTimestamp.setText(message.getFormattedTime());
-
-            // Setup user actions
             setupUserActions(holder, message);
-
         } else {
-            // Show AI container, hide user container
             holder.userMessageContainer.setVisibility(View.GONE);
             holder.aiMessageContainer.setVisibility(View.VISIBLE);
 
@@ -86,92 +90,57 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
                 } else {
                     holder.codeBlocksContainer.setVisibility(View.GONE);
                     holder.aiMessageText.setVisibility(View.VISIBLE);
-                    holder.aiMessageText.setText(text);
+                    markwon.setMarkdown(holder.aiMessageText, text);
                 }
             }
 
             holder.aiTimestamp.setText(message.getFormattedTime());
-
-            // Response time
             if (message.getResponseTimeMs() > 0) {
                 holder.responseTimeText.setVisibility(View.VISIBLE);
                 holder.responseTimeText.setText("• " + message.getFormattedResponseTime());
             } else {
                 holder.responseTimeText.setVisibility(View.GONE);
             }
-
-            // Setup AI actions
             setupAIActions(holder, message);
         }
     }
 
     private void setupUserActions(ViewHolder holder, ChatMessage message) {
         Context context = holder.itemView.getContext();
-
-        // Copy action
         holder.btnUserCopy.setOnClickListener(v -> {
-            if (actionListener != null) {
-                actionListener.onCopy(message);
-            } else {
-                copyToClipboard(context, message.getText());
-            }
+            if (actionListener != null) actionListener.onCopy(message);
+            else copyToClipboard(context, message.getText());
         });
-
-        // Edit action
         holder.btnUserEdit.setOnClickListener(v -> {
-            if (actionListener != null) {
-                actionListener.onEdit(message);
-            }
+            if (actionListener != null) actionListener.onEdit(message);
         });
     }
 
     private void setupAIActions(ViewHolder holder, ChatMessage message) {
         Context context = holder.itemView.getContext();
-
-        // Copy
         holder.btnAiCopy.setOnClickListener(v -> {
-            if (actionListener != null) {
-                actionListener.onCopy(message);
-            } else {
-                copyToClipboard(context, message.getText());
-            }
+            if (actionListener != null) actionListener.onCopy(message);
+            else copyToClipboard(context, message.getText());
         });
-
-        // Download
         holder.btnAiDownload.setOnClickListener(v -> {
-            if (actionListener != null) {
-                actionListener.onDownload(message);
-            } else {
-                // Default: share the text
+            if (actionListener != null) actionListener.onDownload(message);
+            else {
                 Intent shareIntent = new Intent(Intent.ACTION_SEND);
                 shareIntent.setType("text/plain");
                 shareIntent.putExtra(Intent.EXTRA_TEXT, message.getText());
                 context.startActivity(Intent.createChooser(shareIntent, "Share response"));
             }
         });
-
-        // Retry/Regenerate
         holder.btnAiRetry.setOnClickListener(v -> {
-            if (actionListener != null) {
-                actionListener.onRegenerate(message);
-            }
+            if (actionListener != null) actionListener.onRegenerate(message);
         });
-
-        // Make Longer
         holder.btnAiLonger.setOnClickListener(v -> {
-            if (actionListener != null) {
-                actionListener.onMakeLonger(message);
-            }
+            if (actionListener != null) actionListener.onMakeLonger(message);
         });
-
-        // Make Shorter
         holder.btnAiShorter.setOnClickListener(v -> {
-            if (actionListener != null) {
-                actionListener.onMakeShorter(message);
-            }
+            if (actionListener != null) actionListener.onMakeShorter(message);
         });
 
-        // Disable actions during generation
         boolean generating = message.isGenerating();
         holder.btnAiRetry.setEnabled(!generating);
         holder.btnAiLonger.setEnabled(!generating);
@@ -190,24 +159,18 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
     }
 
     private void renderMixedContent(ViewHolder holder, String text) {
-        holder.aiMessageText.setVisibility(View.GONE);
-
         String[] parts = text.split("```");
         for (int i = 0; i < parts.length; i++) {
             String part = parts[i];
             if (part.trim().isEmpty()) continue;
-
-            if (i % 2 == 1) {
-                addCodeBlockView(holder, part);
-            } else {
-                addTextView(holder, part);
-            }
+            if (i % 2 == 1) addCodeBlockView(holder, part);
+            else addTextView(holder, part);
         }
     }
 
     private void addTextView(ViewHolder holder, String text) {
         TextView tv = new TextView(holder.itemView.getContext());
-        tv.setText(text.trim());
+        markwon.setMarkdown(tv, text.trim());
         tv.setTextSize(15);
         tv.setTextColor(holder.itemView.getContext().getColor(R.color.bubble_ai_text));
         tv.setPadding(0, 4, 0, 4);
@@ -215,9 +178,7 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
     }
 
     private void addCodeBlockView(ViewHolder holder, String codeContent) {
-        View codeView = LayoutInflater.from(holder.itemView.getContext())
-                .inflate(R.layout.layout_code_block, null, false);
-
+        View codeView = LayoutInflater.from(holder.itemView.getContext()).inflate(R.layout.layout_code_block, null, false);
         TextView langTv = codeView.findViewById(R.id.codeLanguage);
         TextView codeTv = codeView.findViewById(R.id.codeText);
         View copyBtn = codeView.findViewById(R.id.btnCopyCode);
@@ -229,16 +190,11 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
             lang = codeContent.substring(0, firstNewLine).trim();
             code = codeContent.substring(firstNewLine).trim();
         }
-
         if (lang.isEmpty()) lang = "Code";
         langTv.setText(lang);
         codeTv.setText(code);
-
         final String finalCode = code;
-        copyBtn.setOnClickListener(v -> {
-            copyToClipboard(v.getContext(), finalCode);
-        });
-
+        copyBtn.setOnClickListener(v -> copyToClipboard(v.getContext(), finalCode));
         holder.codeBlocksContainer.addView(codeView);
     }
 
@@ -248,30 +204,20 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
     }
 
     static class ViewHolder extends RecyclerView.ViewHolder {
-        // User message elements
-        LinearLayout userMessageContainer;
-        MaterialCardView bubbleLayout;
-        TextView messageText, userTimestamp;
-        ImageButton btnUserCopy, btnUserEdit;
-
-        // AI message elements
-        LinearLayout aiMessageContainer, codeBlocksContainer, aiActionsLayout, metadataLayout;
-        MaterialCardView aiBubbleLayout;
-        TextView aiMessageText, aiTimestamp, responseTimeText;
+        LinearLayout userMessageContainer, aiMessageContainer, codeBlocksContainer, aiActionsLayout, metadataLayout;
+        MaterialCardView bubbleLayout, aiBubbleLayout;
+        TextView messageText, userTimestamp, aiMessageText, aiTimestamp, responseTimeText;
         ProgressBar typingIndicator;
-        ImageButton btnAiCopy, btnAiDownload, btnAiRetry, btnAiLonger, btnAiShorter;
+        ImageButton btnUserCopy, btnUserEdit, btnAiCopy, btnAiDownload, btnAiRetry, btnAiLonger, btnAiShorter;
 
         ViewHolder(View view) {
             super(view);
-            // User message
             userMessageContainer = view.findViewById(R.id.userMessageContainer);
             bubbleLayout = view.findViewById(R.id.bubbleLayout);
             messageText = view.findViewById(R.id.messageText);
             userTimestamp = view.findViewById(R.id.userTimestamp);
             btnUserCopy = view.findViewById(R.id.btnUserCopy);
             btnUserEdit = view.findViewById(R.id.btnUserEdit);
-
-            // AI message
             aiMessageContainer = view.findViewById(R.id.aiMessageContainer);
             aiBubbleLayout = view.findViewById(R.id.aiBubbleLayout);
             aiMessageText = view.findViewById(R.id.aiMessageText);
@@ -281,8 +227,6 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
             metadataLayout = view.findViewById(R.id.metadataLayout);
             aiTimestamp = view.findViewById(R.id.aiTimestamp);
             responseTimeText = view.findViewById(R.id.responseTimeText);
-
-            // AI action buttons
             btnAiCopy = view.findViewById(R.id.btnAiCopy);
             btnAiDownload = view.findViewById(R.id.btnAiDownload);
             btnAiRetry = view.findViewById(R.id.btnAiRetry);

@@ -132,14 +132,31 @@ public class ModelsFragment extends Fragment implements ModelManager.DownloadPro
                             com.google.gson.JsonObject obj = results.get(i).getAsJsonObject();
                             String modelId = obj.get("id").getAsString();
                             
-                            // A more robust way to handle the name and URL
+                            // Find GGUF files in siblings
+                            String fileName = "";
+                            if (obj.has("siblings")) {
+                                com.google.gson.JsonArray siblings = obj.getAsJsonArray("siblings");
+                                for (int j = 0; j < siblings.size(); j++) {
+                                    String rfile = siblings.get(j).getAsJsonObject().get("rfile").getAsString();
+                                    if (rfile.toLowerCase().endsWith(".gguf")) {
+                                        fileName = rfile;
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            if (fileName.isEmpty()) {
+                                // Fallback: search for first file in repo if siblings missing
+                                fileName = modelId.contains("/") ? modelId.split("/")[1] + ".gguf" : modelId + ".gguf";
+                            }
+                            
                             String displayName = modelId.contains("/") ? modelId.split("/")[1] : modelId;
-                            String downloadUrl = "https://huggingface.co/" + modelId + "/resolve/main/";
+                            String downloadUrl = "https://huggingface.co/" + modelId + "/resolve/main/" + fileName;
                             
                             ModelManager.ModelInfo info = new ModelManager.ModelInfo(
-                                displayName,
+                                displayName + " (" + fileName + ")",
                                 downloadUrl, 
-                                modelId.replace("/", "_") + ".gguf.enc",
+                                modelId.replace("/", "_") + "_" + fileName.replace("/", "_") + ".enc",
                                 "PLACEHOLDER",
                                 ModelManager.Tier.BALANCED,
                                 4000L * 1024L * 1024L

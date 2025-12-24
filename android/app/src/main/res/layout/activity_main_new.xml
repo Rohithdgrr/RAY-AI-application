@@ -57,7 +57,7 @@
                             android:id="@+id/toolbarLogo"
                             android:layout_width="40dp"
                             android:layout_height="40dp"
-                            android:src="@drawable/ic_ray_logo"
+                            android:src="@drawable/ray_logo"
                             android:scaleType="centerInside"
                             android:contentDescription="RAY AI Logo"
                             android:layout_marginEnd="8dp" />
@@ -137,7 +137,7 @@
         android:layout_gravity="start"
         android:background="@color/surface"
         android:elevation="16dp"
-        android:fitsSystemWindows="true">
+        android:fitsSystemWindows="false">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -155,7 +155,7 @@
                 <ImageView
                     android:layout_width="64dp"
                     android:layout_height="64dp"
-                    android:src="@drawable/ic_ray_logo"
+                    android:src="@drawable/ray_logo"
                     android:scaleType="centerInside"
                     android:contentDescription="RAY AI Logo" />
 
@@ -177,6 +177,48 @@
                     android:layout_marginTop="4dp" />
 
             </LinearLayout>
+
+            <!-- About Section at Bottom -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
+                android:gravity="bottom"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:alpha="0.8">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="RAY AI v1.0"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        android:textColor="@color/text_secondary" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Private • Secure • Offline"
+                        android:textSize="10sp"
+                        android:textColor="@color/text_secondary" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Created by ROT"
+                        android:textSize="11sp"
+                        android:textColor="@color/primary"
+                        android:layout_marginTop="4dp" />
+
+                </LinearLayout>
+
+            </RelativeLayout>
 
             <!-- New Chat Button -->
             <com.google.android.material.button.MaterialButton
