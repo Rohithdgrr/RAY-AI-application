@@ -15,11 +15,23 @@ RAY AI is a high-performance, private, and secure offline AI assistant for Andro
 - **Model Management**: Download and manage lightweight models optimized for mobile (TinyLlama, Qwen, etc.).
 - **Real-time Streaming**: Watch responses generate token-by-token.
 - **Secure Storage**: Models and sensitive data are protected with hardware-backed encryption.
-|           |           |
-|-----------|-----------|
-| ![ray 1](https://github.com/user-attachments/assets/e8c2f098-a4f5-4c6c-99ac-7b17c989a6f3) | ![ray 2](https://github.com/user-attachments/assets/b65004bf-e6cd-4c25-98e4-e447945d5be2) |
-| ![ray 3](https://github.com/user-attachments/assets/93f8099c-99a6-45a0-8354-51e3c5e34ce0) | ![ray 4](https://github.com/user-attachments/assets/3f4001cd-515c-4028-8265-16f2a650ae25) |
+## Screenshots
 
+Here’s how RAY AI looks in action:
+
+<table>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/e8c2f098-a4f5-4c6c-99ac-7b17c989a6f3" width="100%" alt="Chat interface - Thinking phase"/></td>
+    <td><img src="https://github.com/user-attachments/assets/b65004bf-e6cd-4c25-98e4-e447945d5be2" width="100%" alt="Model management screen"/></td>
+  </tr>
+  <tr>
+    <td><img src="https://github.com/user-attachments/assets/93f8099c-99a6-45a0-8354-51e3c5e34ce0" width="100%" alt="Response starting"/></td>
+    <td><img src="https://github.com/user-attachments/assets/3f4001cd-515c-4028-8265-16f2a650ae25" width="100%" alt="Full streaming response"/></td>
+  </tr>
+</table>
+
+**From left to right, top to bottom:**  
+Chat · Model management · Thinking → Response · Complete answer streaming
 
 
 
