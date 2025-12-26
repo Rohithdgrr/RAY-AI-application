@@ -16,10 +16,8 @@ RAY AI is a high-performance, private, and secure offline AI assistant for Andro
 - **Real-time Streaming**: Watch responses generate token-by-token.
 - **Secure Storage**: Models and sensitive data are protected with hardware-backed encryption.
 
-- ![ray 1](https://github.com/user-attachments/assets/47d10911-8cde-45ab-99bb-4a0638284025)
-- ![ray 2](https://github.com/user-attachments/assets/aa464361-aa29-4ab2-a6df-25c9b60068bf)
-- ![ray 3](https://github.com/user-attachments/assets/5711e228-3975-4916-9b51-d9fb7ae5bae5)
-- ![ray 4](https://github.com/user-attachments/assets/22aeaefa-7fc1-457a-b12c-314e4a8a01cf)
+- ![ray 1](https://github.com/user-attachments/assets/47d10911-8cde-45ab-99bb-4a0638284025) | ![ray 2](https://github.com/user-attachments/assets/aa464361-aa29-4ab2-a6df-25c9b60068bf)
+- ![ray 3](https://github.com/user-attachments/assets/5711e228-3975-4916-9b51-d9fb7ae5bae5) | ![ray 4](https://github.com/user-attachments/assets/22aeaefa-7fc1-457a-b12c-314e4a8a01cf)
 
 
 
