@@ -45,10 +45,11 @@ public class ModelDownloadWorker extends Worker {
         File targetFile = new File(ctx.getFilesDir(), fileName);
 
         ModelManager manager = ModelManager.getInstance(ctx);
+        long existingLength = tempFile.exists() ? tempFile.length() : 0;
 
         try {
             // Follow redirects manually for better control
-            HttpURLConnection conn = createConnectionWithRedirects(urlString);
+            HttpURLConnection conn = createConnectionWithRedirects(urlString, existingLength);
             
             if (conn == null) {
                 manager.onWorkerFailed(fileName, "Failed to connect after redirects");
@@ -58,27 +59,44 @@ public class ModelDownloadWorker extends Worker {
             int responseCode = conn.getResponseCode();
             Log.d(TAG, "Response code: " + responseCode);
             
-            if (responseCode != HttpURLConnection.HTTP_OK) {
+            long total;
+            boolean append = false;
+
+            if (responseCode == HttpURLConnection.HTTP_PARTIAL) {
+                // Resuming
+                String contentRange = conn.getHeaderField("Content-Range");
+                if (contentRange != null) {
+                    // format: bytes start-end/total
+                    total = Long.parseLong(contentRange.substring(contentRange.lastIndexOf("/") + 1));
+                } else {
+                    total = conn.getContentLengthLong() + existingLength;
+                }
+                append = true;
+                Log.d(TAG, "Resuming download from " + existingLength + " bytes. Total: " + total);
+            } else if (responseCode == HttpURLConnection.HTTP_OK) {
+                // Starting fresh or server doesn't support Range
+                total = conn.getContentLengthLong();
+                existingLength = 0;
+                append = false;
+                Log.d(TAG, "Starting fresh download. Total: " + total);
+            } else {
                 String errorMsg = "HTTP Error: " + responseCode;
                 Log.e(TAG, errorMsg);
                 manager.onWorkerFailed(fileName, errorMsg);
                 return Result.failure(new Data.Builder().putString("error", errorMsg).build());
             }
 
-            long total = conn.getContentLengthLong();
-            Log.d(TAG, "Content length: " + total);
-            
             try (InputStream in = new BufferedInputStream(conn.getInputStream(), 16384);
-                 FileOutputStream out = new FileOutputStream(tempFile)) {
+                 FileOutputStream out = new FileOutputStream(tempFile, append)) {
                 byte[] buffer = new byte[16384];
-                long downloaded = 0;
+                long downloaded = existingLength;
                 int read;
                 long lastProgressTime = System.currentTimeMillis();
                 
                 while ((read = in.read(buffer)) != -1) {
                     if (isStopped()) {
-                        Log.d(TAG, "Download stopped by system");
-                        tempFile.delete();
+                        Log.d(TAG, "Download stopped by system (Paused/Cancelled)");
+                        // We DON'T delete tempFile here to allow resuming
                         return Result.failure();
                     }
                     
@@ -144,13 +162,13 @@ public class ModelDownloadWorker extends Worker {
             
         } catch (Exception e) {
             Log.e(TAG, "Download failed", e);
-            tempFile.delete();
+            // We DON'T delete tempFile here to allow resuming after network change/error
             manager.onWorkerFailed(fileName, e.getMessage());
             return Result.failure(new Data.Builder().putString("error", e.getMessage()).build());
         }
     }
 
-    private HttpURLConnection createConnectionWithRedirects(String urlString) throws Exception {
+    private HttpURLConnection createConnectionWithRedirects(String urlString, long offset) throws Exception {
         int redirectCount = 0;
         String currentUrl = urlString;
         
@@ -163,11 +181,15 @@ public class ModelDownloadWorker extends Worker {
             conn.setRequestMethod("GET");
             conn.setRequestProperty("User-Agent", "RAY-AI-Android/1.0");
             conn.setRequestProperty("Accept", "*/*");
+
+            if (offset > 0) {
+                conn.setRequestProperty("Range", "bytes=" + offset + "-");
+            }
             
             int responseCode = conn.getResponseCode();
             Log.d(TAG, "Checking URL: " + currentUrl + " -> " + responseCode);
             
-            if (responseCode == HttpURLConnection.HTTP_OK) {
+            if (responseCode == HttpURLConnection.HTTP_OK || responseCode == HttpURLConnection.HTTP_PARTIAL) {
                 return conn;
             } else if (responseCode == HttpURLConnection.HTTP_MOVED_TEMP ||
                        responseCode == HttpURLConnection.HTTP_MOVED_PERM ||

@@ -104,9 +104,9 @@ public class MainActivity extends AppCompatActivity implements ModelManager.Down
     }
 
     private void showInfoDialog() {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_about, null);
         new com.google.android.material.dialog.MaterialAlertDialogBuilder(this)
-                .setTitle("About RAY AI")
-                .setMessage("RAY AI ORCHID v1.0\nCreated by ROT\n\nA professional offline AI assistant running locally on your device.")
+                .setView(dialogView)
                 .setPositiveButton("OK", null)
                 .show();
     }

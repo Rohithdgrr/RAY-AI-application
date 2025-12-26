@@ -113,39 +113,38 @@ public class ModelAdapter extends RecyclerView.Adapter<ModelAdapter.ViewHolder> 
             default:
                 badgeColor = holder.itemView.getContext().getColor(R.color.primary);
         }
-        // Apply color without using invalid resource id
         holder.tierBadge.setChipBackgroundColor(android.content.res.ColorStateList.valueOf(badgeColor));
         if (holder.usageChip != null) holder.usageChip.setText(model.usage != null ? model.usage : "Text Generation");
 
-        // Verification check
-        if (!model.isDownloaded) {
-            model.isDownloaded = manager.isModelAvailableOnDevice(model.fileName);
-        }
+        // Check for partial download
+        java.io.File tempFile = new java.io.File(holder.itemView.getContext().getCacheDir(), model.fileName + ".tmp");
+        boolean hasPartial = tempFile.exists() && tempFile.length() > 0;
 
         if (model.isDownloaded) {
-            // Downloaded state
             holder.btnDownload.setVisibility(View.GONE);
+            holder.btnPauseResume.setVisibility(View.GONE);
+            holder.btnStop.setVisibility(View.GONE);
             holder.btnUse.setVisibility(View.VISIBLE);
             holder.btnDelete.setVisibility(View.VISIBLE);
             holder.statusIcon.setVisibility(View.VISIBLE);
             holder.progressContainer.setVisibility(View.GONE);
             
-            holder.btnUse.setOnClickListener(v -> {
-                if (listener != null) listener.onModelSelected(model);
-            });
-            
+            holder.btnUse.setOnClickListener(v -> { if (listener != null) listener.onModelSelected(model); });
             holder.btnDelete.setOnClickListener(v -> {
                 manager.deleteModel(model);
                 model.isDownloaded = false;
                 notifyItemChanged(position);
             });
         } else if (model.isDownloading) {
-            // Downloading state
             holder.btnDownload.setVisibility(View.GONE);
             holder.btnUse.setVisibility(View.GONE);
             holder.btnDelete.setVisibility(View.GONE);
             holder.statusIcon.setVisibility(View.GONE);
             holder.progressContainer.setVisibility(View.VISIBLE);
+            
+            holder.btnPauseResume.setVisibility(View.VISIBLE);
+            holder.btnPauseResume.setText("Pause");
+            holder.btnStop.setVisibility(View.VISIBLE);
             
             holder.modelProgress.setProgress(model.downloadProgress);
             String percent = model.downloadProgress + "%";
@@ -156,19 +155,39 @@ public class ModelAdapter extends RecyclerView.Adapter<ModelAdapter.ViewHolder> 
                 bytes = " (" + sizeFormat.format(downloadedGb) + " / " + sizeFormat.format(totalGb) + " GB)";
             }
             holder.downloadStatus.setText("Downloading: " + percent + bytes);
+
+            holder.btnPauseResume.setOnClickListener(v -> {
+                manager.pauseDownload(model);
+                notifyItemChanged(position);
+            });
+            holder.btnStop.setOnClickListener(v -> {
+                manager.stopDownload(model);
+                notifyItemChanged(position);
+            });
         } else {
-            // Not downloaded state
             holder.btnDownload.setVisibility(View.VISIBLE);
-            holder.btnDownload.setText("Download");
-            holder.btnDownload.setEnabled(true);
-            holder.btnDownload.setAlpha(1.0f);
+            holder.btnDownload.setText(hasPartial ? "Resume" : "Download");
             holder.btnUse.setVisibility(View.GONE);
             holder.btnDelete.setVisibility(View.GONE);
+            holder.btnPauseResume.setVisibility(View.GONE);
+            holder.btnStop.setVisibility(hasPartial ? View.VISIBLE : View.GONE);
             holder.statusIcon.setVisibility(View.GONE);
-            holder.progressContainer.setVisibility(View.GONE);
+            
+            if (hasPartial) {
+                holder.progressContainer.setVisibility(View.VISIBLE);
+                holder.modelProgress.setProgress(0); // Indeterminate or based on file size if we knew total
+                long currentSize = tempFile.length();
+                holder.downloadStatus.setText("Paused (" + sizeFormat.format(currentSize / (1024.0 * 1024.0 * 1024.0)) + " GB saved)");
+            } else {
+                holder.progressContainer.setVisibility(View.GONE);
+            }
             
             holder.btnDownload.setOnClickListener(v -> {
                 manager.downloadModel(model);
+                notifyItemChanged(position);
+            });
+            holder.btnStop.setOnClickListener(v -> {
+                manager.stopDownload(model);
                 notifyItemChanged(position);
             });
         }
@@ -181,7 +200,7 @@ public class ModelAdapter extends RecyclerView.Adapter<ModelAdapter.ViewHolder> 
 
     static class ViewHolder extends RecyclerView.ViewHolder {
         TextView modelName, modelTier, modelSize, downloadStatus;
-        MaterialButton btnDownload, btnUse, btnDelete;
+        MaterialButton btnDownload, btnUse, btnDelete, btnStop, btnPauseResume;
         ProgressBar modelProgress;
         LinearLayout progressContainer;
         Chip tierBadge;
@@ -196,6 +215,8 @@ public class ModelAdapter extends RecyclerView.Adapter<ModelAdapter.ViewHolder> 
             btnDownload = view.findViewById(R.id.btnDownload);
             btnUse = view.findViewById(R.id.btnUse);
             btnDelete = view.findViewById(R.id.btnDelete);
+            btnStop = view.findViewById(R.id.btnStop);
+            btnPauseResume = view.findViewById(R.id.btnPauseResume);
             modelProgress = view.findViewById(R.id.modelProgress);
             progressContainer = view.findViewById(R.id.progressContainer);
             tierBadge = view.findViewById(R.id.tierBadge);

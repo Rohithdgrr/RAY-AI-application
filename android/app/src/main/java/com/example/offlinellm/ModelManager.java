@@ -612,14 +612,29 @@ public class ModelManager {
         }).start();
     }
 
-    public void cancelDownload(ModelInfo info) {
-        if (info.downloadId != -1 && info.isDownloading) {
-            DownloadManager dm = (DownloadManager) context.getSystemService(Context.DOWNLOAD_SERVICE);
-            dm.remove(info.downloadId);
-            activeDownloads.remove(info.downloadId);
-            resetDownloadStatus(info);
-            Log.d(TAG, "Cancelled download for " + info.name);
+    public void pauseDownload(ModelInfo info) {
+        if (info.isDownloading) {
+            WorkManager.getInstance(context).cancelUniqueWork("model-download-" + info.fileName);
+            info.isDownloading = false;
+            // Notify listeners that it's "paused" (failed with a specific state or just updated)
+            notifyProgressListeners(info, info.downloadProgress, info.downloadedBytes, info.totalBytes);
+            Log.d(TAG, "Paused download for " + info.name);
         }
+    }
+
+    public void stopDownload(ModelInfo info) {
+        WorkManager.getInstance(context).cancelUniqueWork("model-download-" + info.fileName);
+        File tempFile = new File(context.getCacheDir(), info.fileName + ".tmp");
+        if (tempFile.exists()) {
+            tempFile.delete();
+        }
+        resetDownloadStatus(info);
+        notifyProgressListeners(info, 0, 0, 0);
+        Log.d(TAG, "Stopped and cleared download for " + info.name);
+    }
+
+    public void cancelDownload(ModelInfo info) {
+        stopDownload(info);
     }
 
     public void deleteModel(ModelInfo info) {

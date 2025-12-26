@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:padding="20dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="RAY AI ORCHID"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:textColor="@color/text_primary"
+            android:gravity="center"
+            android:layout_marginBottom="8dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="v1.0.0 (Release)"
+            android:textSize="14sp"
+            android:textColor="@color/text_secondary"
+            android:gravity="center"
+            android:layout_marginBottom="24dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="CREATOR"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="@color/accent_primary"
+            android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="ROT (Rohith)"
+            android:textSize="16sp"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="AIM"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="@color/accent_primary"
+            android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="To provide a private, high-performance, and fully offline AI experience on mobile devices, ensuring data sovereignty and intelligence everywhere."
+            android:textSize="14sp"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="ABSTRACT"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="@color/accent_primary"
+            android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="RAY AI leverages cutting-edge quantization and native inference engines to run Large Language Models (LLMs) locally on Android. By optimizing the interaction between Java/Kotlin and C++ (JNI), it achieves near-native performance for real-time chat and reasoning."
+            android:textSize="14sp"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="SUMMARY"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="@color/accent_primary"
+            android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="A comprehensive mobile ecosystem for local LLM deployment, featuring multi-engine support, hardware acceleration, and robust local data management."
+            android:textSize="14sp"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="TECH STACK"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="@color/accent_primary"
+            android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="• Android Native (Java/Kotlin)\n• llama.cpp (C++ Native Engine)\n• ONNX Runtime Mobile\n• JNI (Java Native Interface)\n• Material Design 3\n• WorkManager (Background Ops)"
+            android:textSize="14sp"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="ARCHITECTURE"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="@color/accent_primary"
+            android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="The application uses a Layered Architecture:\n1. UI Layer: Modern Material Design components.\n2. Service Layer: Management of model downloads and state.\n3. Native Bridge: JNI wrapper for heavy computations.\n4. Inference Engine: Optimized llama.cpp backend."
+            android:textSize="14sp"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="LICENSE"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="@color/accent_primary"
+            android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="MIT License"
+            android:textSize="14sp"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="GIT REPOSITORY"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="@color/accent_primary"
+            android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="https://github.com/Rohithdgrr/RAY-AI-application"
+            android:textSize="14sp"
+            android:textColor="@color/accent_primary"
+            android:layout_marginBottom="16dp"
+            android:autoLink="web"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="REFERENCE"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="@color/accent_primary"
+            android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="• llama.cpp project by ggerganov\n• Hugging Face Model Hub\n• Android Open Source Project"
+            android:textSize="14sp"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="16dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="FUTURE SCOPE"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:textColor="@color/accent_primary"
+            android:layout_marginBottom="4dp"/>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="• Multi-modal support (Vision/Audio)\n• Advanced fine-tuning on device\n• Plugin system for tool use\n• Desktop cross-platform sync"
+            android:textSize="14sp"
+            android:textColor="@color/text_primary"
+            android:layout_marginBottom="24dp"/>
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>
