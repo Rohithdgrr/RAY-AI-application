@@ -1,4 +1,4 @@
-<img width="741" height="371" alt="image" src="https://github.com/user-attachments/assets/9d5369b6-8fdc-4405-b055-4291b6570bd3" />
+<img width="741" height="404" alt="RAY AI LOGO-Picsart-AiImageEnhancer" src="https://github.com/user-attachments/assets/8820d217-72cd-460f-8b28-af9eed47aa25" />
 
 
 
