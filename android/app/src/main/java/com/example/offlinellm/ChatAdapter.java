@@ -75,48 +75,49 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
             String thought = message.getThought();
             holder.codeBlocksContainer.removeAllViews();
 
-            boolean hasContent = (text != null && !text.trim().isEmpty()) || (thought != null && !thought.trim().isEmpty());
+            boolean hasText = (text != null && !text.trim().isEmpty());
+            boolean hasThought = (thought != null && !thought.trim().isEmpty());
 
-            if (message.isGenerating() && !hasContent) {
+            if (message.isGenerating()) {
                 holder.thinkingLayout.setVisibility(View.VISIBLE);
-                holder.thoughtContainer.setVisibility(View.GONE);
-                holder.aiMessageText.setVisibility(View.GONE);
-                holder.codeBlocksContainer.setVisibility(View.GONE);
                 holder.aiActionsLayout.setVisibility(View.GONE);
-                holder.metadataLayout.setVisibility(View.GONE);
                 
                 if (message.getStatus() != null && !message.getStatus().isEmpty()) {
                     holder.thinkingStatusText.setText(message.getStatus());
                     holder.thinkingStatusText.setVisibility(View.VISIBLE);
                 } else {
-                    holder.thinkingStatusText.setVisibility(View.GONE);
+                    holder.thinkingStatusText.setText("Thinking...");
+                    holder.thinkingStatusText.setVisibility(View.VISIBLE);
                 }
             } else {
                 holder.thinkingLayout.setVisibility(View.GONE);
                 holder.aiActionsLayout.setVisibility(View.VISIBLE);
+            }
+
+            // Thought / Reasoning display - show if it has content
+            if (hasThought) {
+                holder.thoughtContainer.setVisibility(View.VISIBLE);
+                holder.thoughtText.setText(thought.trim());
+            } else {
+                holder.thoughtContainer.setVisibility(View.GONE);
+            }
+
+            // Main text display
+            if (hasText) {
                 holder.metadataLayout.setVisibility(View.VISIBLE);
-
-                // Thought / Reasoning display
-                if (thought != null && !thought.trim().isEmpty()) {
-                    holder.thoughtContainer.setVisibility(View.VISIBLE);
-                    holder.thoughtText.setText(thought.trim());
-                } else {
-                    holder.thoughtContainer.setVisibility(View.GONE);
-                }
-
-                if (text != null && text.contains("```")) {
+                if (text.contains("```")) {
                     holder.codeBlocksContainer.setVisibility(View.VISIBLE);
                     holder.aiMessageText.setVisibility(View.GONE);
                     renderMixedContent(holder, text);
                 } else {
                     holder.codeBlocksContainer.setVisibility(View.GONE);
                     holder.aiMessageText.setVisibility(View.VISIBLE);
-                    if (text != null) {
-                        markwon.setMarkdown(holder.aiMessageText, text);
-                    } else {
-                        holder.aiMessageText.setText("");
-                    }
+                    markwon.setMarkdown(holder.aiMessageText, text);
                 }
+            } else {
+                holder.aiMessageText.setVisibility(View.GONE);
+                holder.codeBlocksContainer.setVisibility(View.GONE);
+                holder.metadataLayout.setVisibility(message.isGenerating() ? View.GONE : View.VISIBLE);
             }
 
             holder.aiTimestamp.setText(message.getFormattedTime());

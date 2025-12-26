@@ -103,13 +103,8 @@ Java_com_example_offlinellm_LlamaInference_nativeGenerate(JNIEnv *env, jobject t
     auto * sampler = common_sampler_init(wrapper->model, sparams);
 
     // Initial batch for prompt
-    llama_batch batch = llama_batch_init(tokens.size(), 0, 1);
-    for (size_t i = 0; i < tokens.size(); i++) {
-        common_batch_add(batch, tokens[i], n_past + i, { 0 }, i == (int)tokens.size() - 1);
-    }
-
-    auto start_time = std::chrono::high_resolution_clock::now();
-
+    llama_batch batch = llama_batch_init(tokens.size() > cparams_v2.n_batch ? cparams_v2.n_batch : tokens.size(), 0, 1);
+    
     // Report prompt processing status
     {
         char status[128];
@@ -119,19 +114,32 @@ Java_com_example_offlinellm_LlamaInference_nativeGenerate(JNIEnv *env, jobject t
         env->DeleteLocalRef(jstatus);
     }
 
-    while (n_remain > 0 && !wrapper->stop_requested) {
-        // Decode
+    // Decode prompt in chunks
+    for (size_t i = 0; i < tokens.size(); i += cparams_v2.n_batch) {
+        if (wrapper->stop_requested) break;
+        
+        size_t n_eval = tokens.size() - i;
+        if (n_eval > cparams_v2.n_batch) n_eval = cparams_v2.n_batch;
+        
+        batch.n_tokens = 0;
+        for (size_t j = 0; j < n_eval; j++) {
+            common_batch_add(batch, tokens[i + j], n_past + j, { 0 }, (i + j) == (tokens.size() - 1));
+        }
+        
         if (llama_decode(wrapper->ctx, batch)) {
-            LOGE("Failed to decode");
-            env->CallVoidMethod(cb, onErrorID, env->NewStringUTF("Failed to decode"));
+            LOGE("Failed to decode prompt chunk");
+            env->CallVoidMethod(cb, onErrorID, env->NewStringUTF("Failed to decode prompt"));
             llama_batch_free(batch);
             common_sampler_free(sampler);
             return;
         }
+        n_past += n_eval;
+    }
 
-        n_past += batch.n_tokens;
-        
-        // Report status after prompt processing or every 5 tokens
+    auto start_time = std::chrono::high_resolution_clock::now();
+
+    while (n_remain > 0 && !wrapper->stop_requested) {
+        // Report status every 5 tokens or after first token
         if (n_generated == 0 || n_generated % 5 == 0) {
             auto now = std::chrono::high_resolution_clock::now();
             double duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time).count() / 1000.0;
@@ -165,6 +173,13 @@ Java_com_example_offlinellm_LlamaInference_nativeGenerate(JNIEnv *env, jobject t
         batch.n_tokens = 0;
         common_batch_add(batch, id, n_past, { 0 }, true);
         
+        // Decode next token
+        if (llama_decode(wrapper->ctx, batch)) {
+            LOGE("Failed to decode token");
+            break;
+        }
+
+        n_past += 1;
         n_remain--;
         n_generated++;
     }
