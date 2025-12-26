@@ -78,7 +78,8 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
             boolean hasText = (text != null && !text.trim().isEmpty());
             boolean hasThought = (thought != null && !thought.trim().isEmpty());
 
-            if (message.isGenerating()) {
+            // Only show thinking layout if we are generating AND haven't started producing text/thoughts yet
+            if (message.isGenerating() && !hasText && !hasThought) {
                 holder.thinkingLayout.setVisibility(View.VISIBLE);
                 holder.aiActionsLayout.setVisibility(View.GONE);
                 
@@ -91,7 +92,7 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
                 }
             } else {
                 holder.thinkingLayout.setVisibility(View.GONE);
-                holder.aiActionsLayout.setVisibility(View.VISIBLE);
+                holder.aiActionsLayout.setVisibility(message.isGenerating() ? View.GONE : View.VISIBLE);
             }
 
             // Thought / Reasoning display - show if it has content

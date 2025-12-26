@@ -20,6 +20,7 @@ struct llama_context_wrapper {
     llama_context * ctx = nullptr;
     const struct llama_vocab * vocab = nullptr;
     std::atomic<bool> stop_requested{false};
+    int n_batch = 512;
 };
 
 extern "C" {
@@ -42,24 +43,21 @@ Java_com_example_offlinellm_LlamaInference_nativeInit(JNIEnv *env, jobject thiz,
         return 0;
     }
 
-    auto cparams_v2 = llama_context_default_params();
-    cparams_v2.n_ctx = 4096;
-    cparams_v2.n_batch = 512;  // Reduced from 1024 for better mobile stability/speed
-    cparams_v2.n_ubatch = 256; // Reduced accordingly
+    auto cparams = llama_context_default_params();
+    cparams.n_ctx = 4096;
+    cparams.n_batch = 512;  
+    cparams.n_ubatch = 512; 
     
-    // Optimize threads for mobile: 4-5 threads often performs better than 6-8 due to big/little core scheduling
     uint32_t n_threads = std::thread::hardware_concurrency();
-    if (n_threads >= 8) n_threads = 4; // Use 4 big cores on 8-core chips
+    if (n_threads >= 8) n_threads = 4; 
     else if (n_threads > 4) n_threads = 4;
     else if (n_threads < 1) n_threads = 1;
     
-    cparams_v2.n_threads = n_threads;
-    cparams_v2.n_threads_batch = n_threads;
-    
-    // Enable flash attention if possible (massively speeds up long contexts)
-    cparams_v2.flash_attn_type = LLAMA_FLASH_ATTN_TYPE_ENABLED;
+    cparams.n_threads = n_threads;
+    cparams.n_threads_batch = n_threads;
+    cparams.flash_attn_type = LLAMA_FLASH_ATTN_TYPE_ENABLED;
 
-    llama_context * ctx = llama_init_from_model(model, cparams_v2);
+    llama_context * ctx = llama_init_from_model(model, cparams);
     if (!ctx) {
         LOGE("nativeInit: Failed to create context");
         llama_model_free(model);
@@ -70,8 +68,9 @@ Java_com_example_offlinellm_LlamaInference_nativeInit(JNIEnv *env, jobject thiz,
     wrapper->model = model;
     wrapper->ctx = ctx;
     wrapper->vocab = llama_model_get_vocab(model);
+    wrapper->n_batch = cparams.n_batch;
 
-    LOGD("nativeInit: Model loaded successfully");
+    LOGD("nativeInit: Model loaded successfully with %u threads", n_threads);
     return reinterpret_cast<jlong>(wrapper);
 }
 
@@ -96,14 +95,15 @@ Java_com_example_offlinellm_LlamaInference_nativeGenerate(JNIEnv *env, jobject t
     std::vector<llama_token> tokens = common_tokenize(wrapper->vocab, prompt_std, true, true);
     
     int n_past = 0;
-    int n_remain = 512;
+    int n_remain = 1024; // Increased from 512
     int n_generated = 0;
 
     auto sparams = common_params_sampling();
     auto * sampler = common_sampler_init(wrapper->model, sparams);
 
     // Initial batch for prompt
-    llama_batch batch = llama_batch_init(tokens.size() > cparams_v2.n_batch ? cparams_v2.n_batch : tokens.size(), 0, 1);
+    int initial_batch_size = tokens.size() > (size_t)wrapper->n_batch ? wrapper->n_batch : (int)tokens.size();
+    llama_batch batch = llama_batch_init(initial_batch_size, 0, 1);
     
     // Report prompt processing status
     {
@@ -115,11 +115,11 @@ Java_com_example_offlinellm_LlamaInference_nativeGenerate(JNIEnv *env, jobject t
     }
 
     // Decode prompt in chunks
-    for (size_t i = 0; i < tokens.size(); i += cparams_v2.n_batch) {
+    for (size_t i = 0; i < tokens.size(); i += wrapper->n_batch) {
         if (wrapper->stop_requested) break;
         
         size_t n_eval = tokens.size() - i;
-        if (n_eval > cparams_v2.n_batch) n_eval = cparams_v2.n_batch;
+        if (n_eval > (size_t)wrapper->n_batch) n_eval = wrapper->n_batch;
         
         batch.n_tokens = 0;
         for (size_t j = 0; j < n_eval; j++) {
@@ -139,8 +139,8 @@ Java_com_example_offlinellm_LlamaInference_nativeGenerate(JNIEnv *env, jobject t
     auto start_time = std::chrono::high_resolution_clock::now();
 
     while (n_remain > 0 && !wrapper->stop_requested) {
-        // Report status every 5 tokens or after first token
-        if (n_generated == 0 || n_generated % 5 == 0) {
+        // Report status every 5 tokens
+        if (n_generated % 5 == 0) {
             auto now = std::chrono::high_resolution_clock::now();
             double duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - start_time).count() / 1000.0;
             double tps = duration > 0 ? n_generated / duration : 0;
