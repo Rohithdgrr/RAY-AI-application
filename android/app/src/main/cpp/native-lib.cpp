@@ -122,8 +122,11 @@ Java_com_example_offlinellm_LlamaInference_nativeGenerate(JNIEnv *env, jobject t
     }
     tokens.resize(n_tokens);
 
-    // Initial batch
+    // Initial batch (prompt tokens)
     llama_batch batch = llama_batch_get_one(tokens.data(), tokens.size());
+    for (int i = 0; i < batch.n_tokens; ++i) {
+        batch.pos[i] = wrapper->n_past + i;
+    }
     
     int n_predict = 512;
     int n_gen = 0;
@@ -166,6 +169,7 @@ Java_com_example_offlinellm_LlamaInference_nativeGenerate(JNIEnv *env, jobject t
         }
 
         batch = llama_batch_get_one(&new_token_id, 1);
+        batch.pos[0] = wrapper->n_past;
         n_gen++;
     }
 

@@ -143,17 +143,31 @@ public class MainActivity extends AppCompatActivity implements ModelManager.Down
     }
 
     public boolean handleChatMessage(String prompt, List<ChatMessage> messages, ChatAdapter adapter, RecyclerView recyclerView) {
+        // Always prioritize offline models - never use remote inference
         if (engine == null || !engine.isLoaded()) {
-            // Try fallback engine
-            if (!(engine instanceof FallbackInferenceEngine)) {
+            // Try to load the best available offline model first
+            ModelManager.ModelInfo bestModel = modelManager.getBestDownloadedModel(ModelManager.Tier.ULTRA_LIGHT);
+            if (bestModel != null) {
+                loadModel(bestModel);
+                // Wait a moment for model to load
                 try {
-                    engine = new FallbackInferenceEngine(this);
-                    engine.loadModel(null);
-                } catch (Exception ignored) {}
+                    Thread.sleep(1000);
+                } catch (InterruptedException ignored) {}
+            }
+            
+            // If still not loaded, use fallback engine (offline rule-based)
+            if (engine == null || !engine.isLoaded()) {
+                if (!(engine instanceof FallbackInferenceEngine)) {
+                    try {
+                        engine = new FallbackInferenceEngine(this);
+                        engine.loadModel(null);
+                    } catch (Exception ignored) {}
+                }
             }
         }
+        
         if (engine == null || !engine.isLoaded()) {
-            showSnack("Model not ready. Please go to Models to download/load one.");
+            showSnack("Using offline fallback mode. Download a model from Models tab for better responses.");
             return false;
         }
 
