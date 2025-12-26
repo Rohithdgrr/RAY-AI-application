@@ -1,3 +1,7 @@
+![RAY AI LOGO](https://github.com/user-attachments/assets/b3a1eec3-6933-4b69-8203-219da94ec844) 
+
+
+
 # RAY AI - Offline AI Inference for Android
 
 RAY AI is a high-performance, private, and secure offline AI assistant for Android. It leverages `llama.cpp` and `ONNX Runtime` to provide state-of-the-art LLM inference directly on your device without requiring an internet connection.
