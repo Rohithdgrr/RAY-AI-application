@@ -48,12 +48,17 @@ Java_com_example_offlinellm_LlamaInference_nativeInit(JNIEnv *env, jobject thiz,
     const int n_ctx_val = 4096; // Increased context
     llama_context_params ctx_params = llama_context_default_params();
     ctx_params.n_ctx = n_ctx_val;
-    ctx_params.n_batch = 512;  // Conservative batch size to avoid decode errors
-    ctx_params.n_ubatch = 256; // Conservative physical batch
-    ctx_params.n_threads = std::max(1u, std::thread::hardware_concurrency());
-    ctx_params.n_threads_batch = std::max(1u, std::thread::hardware_concurrency());
-    ctx_params.flash_attn_type = LLAMA_FLASH_ATTN_TYPE_DISABLED;  // Disable flash attention for stability
-    ctx_params.type_k = GGML_TYPE_F16; // Faster precision
+    ctx_params.n_batch = 512;
+    ctx_params.n_ubatch = 512;
+    
+    // Performance optimization: 4 threads is usually the sweet spot for mobile 
+    // to avoid using LITTLE cores and causing jitter/heat.
+    uint32_t n_threads = 4;
+    ctx_params.n_threads = n_threads;
+    ctx_params.n_threads_batch = n_threads;
+    
+    ctx_params.flash_attn = true; // Enable flash attention for speed if supported
+    ctx_params.type_k = GGML_TYPE_F16;
     ctx_params.type_v = GGML_TYPE_F16;
     
     LlamaContextWrapper * wrapper = new LlamaContextWrapper();
@@ -122,6 +127,11 @@ Java_com_example_offlinellm_LlamaInference_nativeGenerate(JNIEnv *env, jobject t
     }
     tokens.resize(n_tokens);
 
+    if (wrapper->should_abort) {
+        env->ReleaseStringUTFChars(prompt, p);
+        return;
+    }
+
     // Initial batch (prompt tokens)
     llama_batch batch = llama_batch_get_one(tokens.data(), tokens.size());
     for (int i = 0; i < batch.n_tokens; ++i) {
@@ -185,6 +195,27 @@ Java_com_example_offlinellm_LlamaInference_nativeGenerate(JNIEnv *env, jobject t
     }
     
     env->ReleaseStringUTFChars(prompt, p);
+}
+
+JNIEXPORT void JNICALL
+Java_com_example_offlinellm_LlamaInference_nativeStop(JNIEnv *env, jobject thiz, jlong ptr) {
+    LlamaContextWrapper * wrapper = (LlamaContextWrapper *)ptr;
+    if (wrapper) {
+        std::lock_guard<std::mutex> lock(wrapper->mtx);
+        wrapper->should_abort = true;
+        LOGD("nativeStop: Stop requested");
+    }
+}
+
+JNIEXPORT void JNICALL
+Java_com_example_offlinellm_LlamaInference_nativeClearKV(JNIEnv *env, jobject thiz, jlong ptr) {
+    LlamaContextWrapper * wrapper = (LlamaContextWrapper *)ptr;
+    if (wrapper && wrapper->ctx) {
+        std::lock_guard<std::mutex> lock(wrapper->mtx);
+        llama_kv_cache_clear(wrapper->ctx);
+        wrapper->n_past = 0;
+        LOGD("nativeClearKV: KV cache cleared");
+    }
 }
 
 JNIEXPORT void JNICALL

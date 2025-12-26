@@ -201,14 +201,15 @@ public class LlamaInference implements InferenceEngine {
             if (contextPointer != 0) {
                 nativeStop(contextPointer);
             }
-            isGenerating = false;
         }
     }
 
     @Override
     public void unload() {
         synchronized (lock) {
+            stopRequested = true;
             if (contextPointer != 0) {
+                nativeStop(contextPointer); // Ensure it stops first
                 nativeFree(contextPointer);
                 contextPointer = 0;
             }

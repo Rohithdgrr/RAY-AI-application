@@ -143,34 +143,6 @@ public class MainActivity extends AppCompatActivity implements ModelManager.Down
     }
 
     public boolean handleChatMessage(String prompt, List<ChatMessage> messages, ChatAdapter adapter, RecyclerView recyclerView) {
-        // Always prioritize offline models - never use remote inference
-        if (engine == null || !engine.isLoaded()) {
-            // Try to load the best available offline model first
-            ModelManager.ModelInfo bestModel = modelManager.getBestDownloadedModel(ModelManager.Tier.ULTRA_LIGHT);
-            if (bestModel != null) {
-                loadModel(bestModel);
-                // Wait a moment for model to load
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException ignored) {}
-            }
-            
-            // If still not loaded, use fallback engine (offline rule-based)
-            if (engine == null || !engine.isLoaded()) {
-                if (!(engine instanceof FallbackInferenceEngine)) {
-                    try {
-                        engine = new FallbackInferenceEngine(this);
-                        engine.loadModel(null);
-                    } catch (Exception ignored) {}
-                }
-            }
-        }
-        
-        if (engine == null || !engine.isLoaded()) {
-            showSnack("Using offline fallback mode. Download a model from Models tab for better responses.");
-            return false;
-        }
-
         if (prompt == null || prompt.trim().isEmpty()) {
             showSnack("Please enter a message");
             return false;
@@ -185,7 +157,44 @@ public class MainActivity extends AppCompatActivity implements ModelManager.Down
 
         isGenerating = true;
 
-        currentGenerationCallback = new InferenceEngine.Callback() {
+        new Thread(() -> {
+            // Check if engine needs loading
+            if (engine == null || !engine.isLoaded()) {
+                ModelManager.ModelInfo bestModel = modelManager.getBestDownloadedModel(ModelManager.Tier.ULTRA_LIGHT);
+                if (bestModel != null) {
+                    try {
+                        File modelFile = new File(getFilesDir(), bestModel.fileName);
+                        InferenceEngine newEngine = InferenceEngine.getForFile(this, modelFile);
+                        newEngine.loadModel(modelFile);
+                        engine = newEngine;
+                        runOnUiThread(() -> {
+                            modelNameText.setText("Model: " + bestModel.name);
+                            currentModelName = bestModel.name;
+                        });
+                    } catch (Exception e) {
+                        Log.e("MainActivity", "Auto-load failed", e);
+                    }
+                }
+                
+                if (engine == null || !engine.isLoaded()) {
+                    try {
+                        engine = new FallbackInferenceEngine(this);
+                        engine.loadModel(null);
+                    } catch (Exception ignored) {}
+                }
+            }
+
+            if (engine == null || !engine.isLoaded()) {
+                runOnUiThread(() -> {
+                    showSnack("Engine failed to initialize");
+                    messages.remove(responseIndex);
+                    adapter.notifyItemRemoved(responseIndex);
+                    isGenerating = false;
+                });
+                return;
+            }
+
+            currentGenerationCallback = new InferenceEngine.Callback() {
             private boolean isFirstToken = true;
 
             @Override
