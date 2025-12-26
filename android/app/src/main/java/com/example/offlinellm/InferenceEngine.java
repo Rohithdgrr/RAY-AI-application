@@ -7,6 +7,7 @@ public interface InferenceEngine {
     interface Callback {
         void onToken(String token);
         default void onThought(String thought) {}
+        default void onStatus(String status) {}
         void onComplete();
         void onError(String message);
     }

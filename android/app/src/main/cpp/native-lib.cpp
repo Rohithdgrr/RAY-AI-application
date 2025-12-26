@@ -19,6 +19,7 @@ struct llama_context_wrapper {
     llama_context * ctx = nullptr;
     const struct llama_vocab * vocab = nullptr;
     std::atomic<bool> stop_requested{false};
+    int n_past = 0;
 };
 
 extern "C" {
@@ -75,28 +76,50 @@ Java_com_example_offlinellm_LlamaInference_nativeGenerate(JNIEnv *env, jobject t
     jmethodID onTokenID = env->GetMethodID(cbClass, "onToken", "(Ljava/lang/String;)V");
     jmethodID onCompleteID = env->GetMethodID(cbClass, "onComplete", "()V");
     jmethodID onErrorID = env->GetMethodID(cbClass, "onError", "(Ljava/lang/String;)V");
+    jmethodID onStatusID = env->GetMethodID(cbClass, "onStatus", "(Ljava/lang/String;)V");
 
     wrapper->stop_requested = false;
 
+    auto send_status = [&](const std::string & status) {
+        if (onStatusID) {
+            jstring jstatus = env->NewStringUTF(status.c_str());
+            env->CallVoidMethod(cb, onStatusID, jstatus);
+            env->DeleteLocalRef(jstatus);
+        }
+    };
+
     // Tokenize
+    send_status("Tokenizing...");
     std::vector<llama_token> tokens = common_tokenize(wrapper->vocab, prompt_std, true, true);
     
-    int n_past = 0;
     int n_remain = 512;
+    int n_prompt = tokens.size();
+
+    // Check if we need to clear context or if we can append
+    // For simplicity in this version, if prompt is too large or we have no history, we might reset
+    // but the Java side should handle sending only the NEW part of the prompt if it wants true KV reuse.
+    // However, llama.cpp handles overlapping tokens if we use the right logic.
+    // For now, let's just use n_past and append.
 
     auto sparams = common_params_sampling();
     auto * sampler = common_sampler_init(wrapper->model, sparams);
+
+    send_status("Processing context (" + std::to_string(n_prompt) + " tokens)...");
+
+    auto start_time = std::chrono::high_resolution_clock::now();
+    int tokens_generated = 0;
 
     while (n_remain > 0 && !wrapper->stop_requested) {
         // Decode
         llama_batch batch = llama_batch_get_one(tokens.data(), tokens.size());
         if (llama_decode(wrapper->ctx, batch)) {
+            LOGE("Failed to decode at n_past=%d", wrapper->n_past);
             env->CallVoidMethod(cb, onErrorID, env->NewStringUTF("Failed to decode"));
             common_sampler_free(sampler);
             return;
         }
 
-        n_past += tokens.size();
+        wrapper->n_past += tokens.size();
         tokens.clear();
 
         // Sample
@@ -118,6 +141,18 @@ Java_com_example_offlinellm_LlamaInference_nativeGenerate(JNIEnv *env, jobject t
 
         tokens.push_back(id);
         n_remain--;
+        tokens_generated++;
+
+        if (tokens_generated == 1) {
+            send_status("Generating response...");
+        }
+    }
+
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end_time - start_time).count();
+    if (duration > 0) {
+        double tps = (double)tokens_generated / (duration / 1000.0);
+        LOGD("Generation speed: %.2f t/s", tps);
     }
 
     common_sampler_free(sampler);
@@ -130,7 +165,8 @@ JNIEXPORT void JNICALL
 Java_com_example_offlinellm_LlamaInference_nativeClearKV(JNIEnv *env, jobject thiz, jlong ptr) {
     auto * wrapper = reinterpret_cast<llama_context_wrapper *>(ptr);
     if (wrapper && wrapper->ctx) {
-        llama_memory_seq_rm(llama_get_memory(wrapper->ctx), -1, -1, -1);
+        llama_kv_cache_clear(wrapper->ctx);
+        wrapper->n_past = 0;
     }
 }
 
