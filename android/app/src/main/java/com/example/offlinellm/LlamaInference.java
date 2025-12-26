@@ -22,6 +22,7 @@ public class LlamaInference implements InferenceEngine {
     private long contextPointer = 0;
     private File tempDecryptedFile = null;
     private Context context;
+    private String modelFileName = "";
 
     public LlamaInference(Context context) {
         this.context = context;
@@ -29,6 +30,9 @@ public class LlamaInference implements InferenceEngine {
 
     @Override
     public void loadModel(File encryptedModelFile) throws Exception {
+        if (encryptedModelFile != null) {
+            this.modelFileName = encryptedModelFile.getName().toLowerCase();
+        }
         if (!isLibraryLoaded) {
             throw new Exception("Native library (llama-jni) not found. The app is likely still compiling or the build failed.");
         }
@@ -110,13 +114,18 @@ public class LlamaInference implements InferenceEngine {
             return;
         }
 
-        // Apply basic Chat Template if not present
+        // Apply best Chat Template based on model name
         String formattedPrompt = prompt;
-        if (!prompt.contains("<|im_start|>") && !prompt.contains("[INST]") && !prompt.contains("<|user|>")) {
-            // Default to ChatML-like template which works for many modern GGUFs (Qwen, Llama 3.2, etc.)
-            formattedPrompt = "<|im_start|>system\nYou are RAY AI, a high-quality, helpful, and professional AI assistant created by ROT. Provide accurate, detailed, and perfectly formatted responses.<|im_end|>\n" +
-                             "<|im_start|>user\n" + prompt + "<|im_end|>\n" +
-                             "<|im_start|>assistant\n";
+        if (!prompt.contains("<|im_start|>") && !prompt.contains("[INST]") && !prompt.contains("<|user|>") && !prompt.contains("<|start_header_id|>")) {
+            if (modelFileName.contains("llama-3")) {
+                // Official Llama 3.2 Instruct template
+                formattedPrompt = "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nYou are RAY AI, a helpful, professional AI assistant.<|eot_id|><|start_header_id|>user<|end_header_id|>\n\n" + prompt + "<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n";
+            } else {
+                // Default to ChatML (Qwen, Phi-3, etc.)
+                formattedPrompt = "<|im_start|>system\nYou are RAY AI, a high-quality, helpful, and professional AI assistant created by ROT. Provide accurate, detailed, and perfectly formatted responses.<|im_end|>\n" +
+                                 "<|im_start|>user\n" + prompt + "<|im_end|>\n" +
+                                 "<|im_start|>assistant\n";
+            }
         }
         
         final String finalPrompt = formattedPrompt;

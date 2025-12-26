@@ -44,13 +44,14 @@ Java_com_example_offlinellm_LlamaInference_nativeInit(JNIEnv *env, jobject thiz,
 
     auto cparams_v2 = llama_context_default_params();
     cparams_v2.n_ctx = 4096;
-    cparams_v2.n_batch = 1024;
-    cparams_v2.n_ubatch = 512;
+    cparams_v2.n_batch = 512;  // Reduced from 1024 for better mobile stability/speed
+    cparams_v2.n_ubatch = 256; // Reduced accordingly
     
-    // Optimize threads for mobile: using too many cores can cause thermal throttling
+    // Optimize threads for mobile: 4-5 threads often performs better than 6-8 due to big/little core scheduling
     uint32_t n_threads = std::thread::hardware_concurrency();
-    if (n_threads > 6) n_threads = 6; // Cap at 6 for stability on mobile
-    if (n_threads < 4 && std::thread::hardware_concurrency() >= 4) n_threads = 4;
+    if (n_threads >= 8) n_threads = 4; // Use 4 big cores on 8-core chips
+    else if (n_threads > 4) n_threads = 4;
+    else if (n_threads < 1) n_threads = 1;
     
     cparams_v2.n_threads = n_threads;
     cparams_v2.n_threads_batch = n_threads;
@@ -108,6 +109,15 @@ Java_com_example_offlinellm_LlamaInference_nativeGenerate(JNIEnv *env, jobject t
     }
 
     auto start_time = std::chrono::high_resolution_clock::now();
+
+    // Report prompt processing status
+    {
+        char status[128];
+        snprintf(status, sizeof(status), "Processing prompt (%zu tokens)...", tokens.size());
+        jstring jstatus = env->NewStringUTF(status);
+        env->CallVoidMethod(cb, onStatusID, jstatus);
+        env->DeleteLocalRef(jstatus);
+    }
 
     while (n_remain > 0 && !wrapper->stop_requested) {
         // Decode
