@@ -68,42 +68,20 @@ public class FallbackInferenceEngine implements InferenceEngine {
         String lower = prompt.toLowerCase();
         
         // Check for model/inference related questions
-        if (lower.contains("model") || lower.contains("download") || lower.contains("offline")) {
-            return "RAY AI works completely offline! All models run locally on your device. Go to the Models tab to download lightweight models that don't require internet connection.";
-        }
-        
-        // Check for creator questions
-        if (lower.contains("who") && lower.contains("rot")) {
-            return "RAY AI was crafted with care by ROT. This is a fully offline AI assistant that runs models locally on your device without any internet connection required.";
+        if (lower.contains("model") || lower.contains("download") || lower.contains("offline") || lower.contains("work")) {
+            return "Hello! I am RAY AI, currently running in MOCK mode because the native AI engine is still compiling or not yet loaded.\n\n" +
+                   "This is a simulation of the offline inference process. Once the build finishes and you download a model from the 'Models' tab, I will be able to provide real on-device responses!";
         }
         
         // Greeting patterns
         if (lower.contains("hello") || lower.contains("hi") || lower.contains("hey")) {
-            return "Hello! I'm RAY AI, your offline assistant. I work completely without internet. Download models from the Models tab for more advanced conversations!";
+            return "Hello! I am RAY AI, running in MOCK mode while the native engine finishes setup.\n\n" +
+                   "I work completely offline once fully initialized. Please ensure you've downloaded a model from the Models tab!";
         }
         
-        // How it works questions
-        if (lower.contains("how") && (lower.contains("work") || lower.contains("function"))) {
-            return "RAY AI runs AI models entirely offline on your device. No internet connection needed! Just download a model from the Models tab and start chatting privately.";
-        }
-        
-        // Help requests
-        if (lower.contains("help") || lower.contains("assist")) {
-            return "I'm here to help! I can answer questions and have conversations completely offline. For better responses, download a model from the Models tab. What would you like to know?";
-        }
-        
-        // Internet/offline related questions
-        if (lower.contains("internet") || lower.contains("online") || lower.contains("connection")) {
-            return "RAY AI works completely offline! No internet connection required. All AI processing happens locally on your device for maximum privacy and speed.";
-        }
-        
-        // Privacy questions
-        if (lower.contains("privacy") || lower.contains("private") || lower.contains("secure")) {
-            return "Your privacy is protected! RAY AI processes everything locally on your device. No data is sent to external servers - it's 100% offline and private.";
-        }
-        
-        // Default response with offline emphasis
-        return "I'm RAY AI, your offline assistant. I can help you without any internet connection. For more detailed conversations, download a model from the Models tab. How can I assist you today?";
+        // Default response with status info
+        return "I'm RAY AI (Offline Mode). I'm currently using my fallback engine because the high-performance native engine is still being prepared.\n\n" +
+               "How can I assist you in the meantime? (Note: Download real models in the Models tab for better answers)";
     }
 
     @Override

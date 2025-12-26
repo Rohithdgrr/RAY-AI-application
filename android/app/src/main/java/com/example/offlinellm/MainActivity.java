@@ -269,10 +269,11 @@ public class MainActivity extends AppCompatActivity implements ModelManager.Down
             showSnack("Generation failed: " + e.getMessage());
             messages.remove(responseIndex);
             adapter.notifyItemRemoved(responseIndex);
-            return false;
+            return;
         }
-        return true;
-    }
+    }).start();
+    return true;
+}
 
     public void loadModel(ModelManager.ModelInfo model) {
         new Thread(() -> {

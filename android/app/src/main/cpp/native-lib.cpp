@@ -1,258 +1,153 @@
 #include <jni.h>
 #include <string>
-#include <vector>
-#include <thread>
-#include <mutex>
 #include <android/log.h>
+#include <thread>
+#include <vector>
 #include <atomic>
+#include <mutex>
 
-#include "llama.h"
+#include "llama.cpp/include/llama.h"
+#include "llama.cpp/common/common.h"
+#include "llama.cpp/common/sampling.h"
 
 #define TAG "LLAMA_JNI"
 #define LOGD(...) __android_log_print(ANDROID_LOG_DEBUG, TAG, __VA_ARGS__)
 #define LOGE(...) __android_log_print(ANDROID_LOG_ERROR, TAG, __VA_ARGS__)
 
-extern "C" {
-
-struct LlamaContextWrapper {
+struct llama_context_wrapper {
     llama_model * model = nullptr;
     llama_context * ctx = nullptr;
-    llama_sampler * smpl = nullptr;
-    uint32_t n_past = 0;
-    std::atomic<bool> should_abort{false};
-    std::atomic<bool> is_generating{false};
-    std::mutex mtx;
+    const struct llama_vocab * vocab = nullptr;
+    std::atomic<bool> stop_requested{false};
 };
 
-static std::once_flag g_llama_init;
+extern "C" {
 
 JNIEXPORT jlong JNICALL
 Java_com_example_offlinellm_LlamaInference_nativeInit(JNIEnv *env, jobject thiz, jstring model_path) {
-    const char *path = env->GetStringUTFChars(model_path, nullptr);
-    LOGD("Initializing model from: %s", path);
+    const char * path = env->GetStringUTFChars(model_path, nullptr);
+    LOGD("nativeInit: Loading model from %s", path);
 
-    std::call_once(g_llama_init, []() {
-        llama_backend_init();
-    });
-    
-    llama_model_params model_params = llama_model_default_params();
-    model_params.use_mmap = true;
-    
-    llama_model * model = llama_model_load_from_file(path, model_params);
-    if (!model) {
-        LOGE("Failed to load model from: %s", path);
-        env->ReleaseStringUTFChars(model_path, path);
-        return 0;
-    }
+    llama_backend_init();
 
-    const int n_ctx_val = 4096; // Increased context
-    llama_context_params ctx_params = llama_context_default_params();
-    ctx_params.n_ctx = n_ctx_val;
-    ctx_params.n_batch = 512;
-    ctx_params.n_ubatch = 512;
-    
-    // Performance optimization: 4 threads is usually the sweet spot for mobile 
-    // to avoid using LITTLE cores and causing jitter/heat.
-    uint32_t n_threads = 4;
-    ctx_params.n_threads = n_threads;
-    ctx_params.n_threads_batch = n_threads;
-    
-    ctx_params.flash_attn = true; // Enable flash attention for speed if supported
-    ctx_params.type_k = GGML_TYPE_F16;
-    ctx_params.type_v = GGML_TYPE_F16;
-    
-    LlamaContextWrapper * wrapper = new LlamaContextWrapper();
-    wrapper->model = model;
-    
-    ctx_params.abort_callback = [](void * data) {
-        LlamaContextWrapper * w = (LlamaContextWrapper *)data;
-        if (w) {
-            std::lock_guard<std::mutex> lock(w->mtx);
-            return w->should_abort;
-        }
-        return false;
-    };
-    ctx_params.abort_callback_data = wrapper;
+    auto mparams = llama_model_default_params();
+    mparams.n_gpu_layers = 0;
 
-    llama_context * ctx = llama_init_from_model(model, ctx_params);
-    if (!ctx) {
-        LOGE("Failed to create context");
-        llama_model_free(model);
-        delete wrapper;
-        env->ReleaseStringUTFChars(model_path, path);
-        return 0;
-    }
-
-    auto sparams = llama_sampler_chain_default_params();
-    llama_sampler * smpl = llama_sampler_chain_init(sparams);
-    llama_sampler_chain_add(smpl, llama_sampler_init_greedy());
-
+    llama_model * model = llama_model_load_from_file(path, mparams);
     env->ReleaseStringUTFChars(model_path, path);
-    
+
+    if (!model) {
+        LOGE("nativeInit: Failed to load model");
+        return 0;
+    }
+
+    auto cparams = llama_context_default_params();
+    cparams.n_ctx = 2048;
+    cparams.n_batch = 512;
+    cparams.n_threads = std::thread::hardware_concurrency();
+
+    llama_context * ctx = llama_init_from_model(model, cparams);
+    if (!ctx) {
+        LOGE("nativeInit: Failed to create context");
+        llama_model_free(model);
+        return 0;
+    }
+
+    auto * wrapper = new llama_context_wrapper();
+    wrapper->model = model;
     wrapper->ctx = ctx;
-    wrapper->smpl = smpl;
-    wrapper->n_past = 0;
-    
-    return (jlong)wrapper;
+    wrapper->vocab = llama_model_get_vocab(model);
+
+    LOGD("nativeInit: Model loaded successfully");
+    return reinterpret_cast<jlong>(wrapper);
 }
 
 JNIEXPORT void JNICALL
 Java_com_example_offlinellm_LlamaInference_nativeGenerate(JNIEnv *env, jobject thiz, jlong ptr, jstring prompt, jobject cb) {
-    LlamaContextWrapper * wrapper = (LlamaContextWrapper *)ptr;
+    auto * wrapper = reinterpret_cast<llama_context_wrapper *>(ptr);
     if (!wrapper) return;
 
-    const char *p = env->GetStringUTFChars(prompt, nullptr);
-    if (!p) return;
+    const char * prompt_str = env->GetStringUTFChars(prompt, nullptr);
+    std::string prompt_std(prompt_str);
+    env->ReleaseStringUTFChars(prompt, prompt_str);
 
     jclass cbClass = env->GetObjectClass(cb);
     jmethodID onTokenID = env->GetMethodID(cbClass, "onToken", "(Ljava/lang/String;)V");
     jmethodID onCompleteID = env->GetMethodID(cbClass, "onComplete", "()V");
+    jmethodID onErrorID = env->GetMethodID(cbClass, "onError", "(Ljava/lang/String;)V");
 
-    {
-        std::lock_guard<std::mutex> lock(wrapper->mtx);
-        wrapper->is_generating = true;
-        wrapper->should_abort = false;
-    }
+    wrapper->stop_requested = false;
 
-    const llama_vocab * vocab = llama_model_get_vocab(wrapper->model);
-    uint32_t n_ctx = llama_n_ctx(wrapper->ctx);
-    
     // Tokenize
-    int32_t n_tokens_max = strlen(p) + 4;
-    std::vector<llama_token> tokens(n_tokens_max);
-    int32_t n_tokens = llama_tokenize(vocab, p, strlen(p), tokens.data(), tokens.size(), wrapper->n_past == 0, true);
-    if (n_tokens < 0) {
-        tokens.resize(-n_tokens);
-        n_tokens = llama_tokenize(vocab, p, strlen(p), tokens.data(), tokens.size(), wrapper->n_past == 0, true);
-    }
-    tokens.resize(n_tokens);
-
-    if (wrapper->should_abort) {
-        env->ReleaseStringUTFChars(prompt, p);
-        return;
-    }
-
-    // Initial batch (prompt tokens)
-    llama_batch batch = llama_batch_get_one(tokens.data(), tokens.size());
-    for (int i = 0; i < batch.n_tokens; ++i) {
-        batch.pos[i] = wrapper->n_past + i;
-    }
+    std::vector<llama_token> tokens = common_tokenize(wrapper->vocab, prompt_std, true, true);
     
-    int n_predict = 512;
-    int n_gen = 0;
-    llama_token new_token_id = 0;
+    int n_past = 0;
+    int n_remain = 512;
 
-    while (n_gen < n_predict) {
-        {
-            std::lock_guard<std::mutex> lock(wrapper->mtx);
-            if (wrapper->should_abort) break;
-        }
+    auto sparams = common_params_sampling();
+    auto * sampler = common_sampler_init(wrapper->model, sparams);
 
-        // Context shift if full
-        if (wrapper->n_past + batch.n_tokens > n_ctx) {
-            LOGD("Context full, resetting n_past");
-            wrapper->n_past = 0;
-            // NOTE: In a real app we'd want to keep some context, but for a fix we just reset
-        }
-
+    while (n_remain > 0 && !wrapper->stop_requested) {
+        // Decode
+        llama_batch batch = llama_batch_get_one(tokens.data(), tokens.size());
         if (llama_decode(wrapper->ctx, batch)) {
-            LOGE("Failed to decode");
+            env->CallVoidMethod(cb, onErrorID, env->NewStringUTF("Failed to decode"));
+            common_sampler_free(sampler);
+            return;
+        }
+
+        n_past += tokens.size();
+        tokens.clear();
+
+        // Sample
+        llama_token id = common_sampler_sample(sampler, wrapper->ctx, -1);
+        common_sampler_accept(sampler, id, true);
+
+        if (llama_vocab_is_eog(wrapper->vocab, id)) {
             break;
         }
 
-        wrapper->n_past += batch.n_tokens;
-
-        new_token_id = llama_sampler_sample(wrapper->smpl, wrapper->ctx, -1);
-        llama_sampler_accept(wrapper->smpl, new_token_id);
-
-        if (llama_vocab_is_eog(vocab, new_token_id)) {
-            break;
-        }
-
+        // Token to piece
         char buf[256];
-        int n = llama_token_to_piece(vocab, new_token_id, buf, sizeof(buf), 0, true);
+        int n = llama_token_to_piece(wrapper->vocab, id, buf, sizeof(buf), 0, true);
         if (n > 0) {
-            std::string piece(buf, n);
-            jstring jtoken = env->NewStringUTF(piece.c_str());
-            env->CallVoidMethod(cb, onTokenID, jtoken);
-            env->DeleteLocalRef(jtoken);
+            jstring jpiece = env->NewStringUTF(std::string(buf, n).c_str());
+            env->CallVoidMethod(cb, onTokenID, jpiece);
+            env->DeleteLocalRef(jpiece);
         }
 
-        batch = llama_batch_get_one(&new_token_id, 1);
-        batch.pos[0] = wrapper->n_past;
-        n_gen++;
+        tokens.push_back(id);
+        n_remain--;
     }
 
-    bool was_aborted = false;
-    {
-        std::lock_guard<std::mutex> lock(wrapper->mtx);
-        was_aborted = wrapper->should_abort;
-        wrapper->is_generating = false;
-    }
-
-    if (!was_aborted) {
+    common_sampler_free(sampler);
+    if (!wrapper->stop_requested) {
         env->CallVoidMethod(cb, onCompleteID);
-    }
-    
-    env->ReleaseStringUTFChars(prompt, p);
-}
-
-JNIEXPORT void JNICALL
-Java_com_example_offlinellm_LlamaInference_nativeStop(JNIEnv *env, jobject thiz, jlong ptr) {
-    LlamaContextWrapper * wrapper = (LlamaContextWrapper *)ptr;
-    if (wrapper) {
-        std::lock_guard<std::mutex> lock(wrapper->mtx);
-        wrapper->should_abort = true;
-        LOGD("nativeStop: Stop requested");
     }
 }
 
 JNIEXPORT void JNICALL
 Java_com_example_offlinellm_LlamaInference_nativeClearKV(JNIEnv *env, jobject thiz, jlong ptr) {
-    LlamaContextWrapper * wrapper = (LlamaContextWrapper *)ptr;
+    auto * wrapper = reinterpret_cast<llama_context_wrapper *>(ptr);
     if (wrapper && wrapper->ctx) {
-        std::lock_guard<std::mutex> lock(wrapper->mtx);
-        llama_kv_cache_clear(wrapper->ctx);
-        wrapper->n_past = 0;
-        LOGD("nativeClearKV: KV cache cleared");
+        llama_memory_seq_rm(llama_get_memory(wrapper->ctx), -1, -1, -1);
+    }
+}
+
+JNIEXPORT void JNICALL
+Java_com_example_offlinellm_LlamaInference_nativeStop(JNIEnv *env, jobject thiz, jlong ptr) {
+    auto * wrapper = reinterpret_cast<llama_context_wrapper *>(ptr);
+    if (wrapper) {
+        wrapper->stop_requested = true;
     }
 }
 
 JNIEXPORT void JNICALL
 Java_com_example_offlinellm_LlamaInference_nativeFree(JNIEnv *env, jobject thiz, jlong ptr) {
-    LlamaContextWrapper * wrapper = (LlamaContextWrapper *)ptr;
+    auto * wrapper = reinterpret_cast<llama_context_wrapper *>(ptr);
     if (wrapper) {
-        {
-            std::lock_guard<std::mutex> lock(wrapper->mtx);
-            wrapper->should_abort = true;
-        }
-        
-        // Wait for generation to stop
-        int timeout = 500; // 5 seconds max
-        while (true) {
-            {
-                std::lock_guard<std::mutex> lock(wrapper->mtx);
-                if (!wrapper->is_generating) break;
-            }
-            if (timeout-- <= 0) {
-                LOGE("nativeFree: Timeout waiting for generation to stop! Potential crash incoming...");
-                break;
-            }
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        }
-
-        if (wrapper->ctx) {
-            llama_free(wrapper->ctx);
-            wrapper->ctx = nullptr;
-        }
-        if (wrapper->model) {
-            llama_model_free(wrapper->model);
-            wrapper->model = nullptr;
-        }
-        if (wrapper->smpl) {
-            llama_sampler_free(wrapper->smpl);
-            wrapper->smpl = nullptr;
-        }
+        if (wrapper->ctx) llama_free(wrapper->ctx);
+        if (wrapper->model) llama_model_free(wrapper->model);
         delete wrapper;
     }
 }

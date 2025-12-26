@@ -7,8 +7,16 @@ import java.io.File;
 public class LlamaInference implements InferenceEngine {
     private static final String TAG = "LlamaInference";
 
+    private static boolean isLibraryLoaded = false;
+
     static {
-        System.loadLibrary("llama-jni");
+        try {
+            System.loadLibrary("llama-jni");
+            isLibraryLoaded = true;
+        } catch (UnsatisfiedLinkError e) {
+            Log.e(TAG, "Failed to load llama-jni library: " + e.getMessage());
+            isLibraryLoaded = false;
+        }
     }
 
     private long contextPointer = 0;
@@ -21,6 +29,10 @@ public class LlamaInference implements InferenceEngine {
 
     @Override
     public void loadModel(File encryptedModelFile) throws Exception {
+        if (!isLibraryLoaded) {
+            throw new Exception("Native library (llama-jni) not found. The app is likely still compiling or the build failed.");
+        }
+        
         // Validate input file
         if (encryptedModelFile == null || !encryptedModelFile.exists()) {
             throw new Exception("Model file not found or is null");
