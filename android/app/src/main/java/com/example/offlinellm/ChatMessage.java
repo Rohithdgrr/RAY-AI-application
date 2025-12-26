@@ -12,12 +12,14 @@ public class ChatMessage {
     private String thought;
     private long startTimeMs;
     private long responseTimeMs;
+    private String status;
     private boolean isGenerating;
 
     public ChatMessage(String sender, String text) {
         this.sender = sender;
         this.text = text;
         this.thought = "";
+        this.status = "";
         this.timestamp = System.currentTimeMillis();
         this.startTimeMs = 0;
         this.responseTimeMs = 0;
@@ -35,6 +37,8 @@ public class ChatMessage {
     public void setText(String text) { this.text = text; }
     public String getThought() { return thought; }
     public void setThought(String thought) { this.thought = thought; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
     public long getTimestamp() { return timestamp; }
     public String getModelName() { return modelName; }
     public void setModelName(String modelName) { this.modelName = modelName; }

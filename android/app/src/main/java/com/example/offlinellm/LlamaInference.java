@@ -183,6 +183,11 @@ public class LlamaInference implements InferenceEngine {
                     }
 
                     @Override
+                    public void onStatus(String status) {
+                        callback.onStatus(status);
+                    }
+
+                    @Override
                     public void onComplete() {
                         synchronized (lock) {
                             isGenerating = false;
@@ -262,6 +267,7 @@ public class LlamaInference implements InferenceEngine {
 
     public interface NativeCallback {
         void onToken(String token);
+        void onStatus(String status);
         void onComplete();
         void onError(String message);
     }

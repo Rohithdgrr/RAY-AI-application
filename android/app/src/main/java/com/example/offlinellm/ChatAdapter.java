@@ -84,6 +84,13 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
                 holder.codeBlocksContainer.setVisibility(View.GONE);
                 holder.aiActionsLayout.setVisibility(View.GONE);
                 holder.metadataLayout.setVisibility(View.GONE);
+                
+                if (message.getStatus() != null && !message.getStatus().isEmpty()) {
+                    holder.thinkingStatusText.setText(message.getStatus());
+                    holder.thinkingStatusText.setVisibility(View.VISIBLE);
+                } else {
+                    holder.thinkingStatusText.setVisibility(View.GONE);
+                }
             } else {
                 holder.thinkingLayout.setVisibility(View.GONE);
                 holder.aiActionsLayout.setVisibility(View.VISIBLE);
@@ -113,7 +120,12 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
             }
 
             holder.aiTimestamp.setText(message.getFormattedTime());
-            if (message.getResponseTimeMs() > 0) {
+            
+            // Show real-time status in metadata while generating
+            if (message.isGenerating() && message.getStatus() != null && !message.getStatus().isEmpty()) {
+                holder.responseTimeText.setVisibility(View.VISIBLE);
+                holder.responseTimeText.setText("• " + message.getStatus());
+            } else if (message.getResponseTimeMs() > 0) {
                 holder.responseTimeText.setVisibility(View.VISIBLE);
                 holder.responseTimeText.setText("• " + message.getFormattedResponseTime());
             } else {
@@ -224,7 +236,7 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
     static class ViewHolder extends RecyclerView.ViewHolder {
         LinearLayout userMessageContainer, aiMessageContainer, codeBlocksContainer, aiActionsLayout, metadataLayout, thinkingLayout;
         MaterialCardView bubbleLayout, aiBubbleLayout, thoughtContainer;
-        TextView messageText, userTimestamp, aiMessageText, aiTimestamp, responseTimeText, thoughtText;
+        TextView messageText, userTimestamp, aiMessageText, aiTimestamp, responseTimeText, thoughtText, thinkingStatusText;
         ImageButton btnUserCopy, btnUserEdit, btnAiCopy, btnAiDownload, btnAiRetry, btnAiLonger, btnAiShorter;
 
         ViewHolder(View view) {
@@ -239,6 +251,7 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
             aiBubbleLayout = view.findViewById(R.id.aiBubbleLayout);
             thoughtContainer = view.findViewById(R.id.thoughtContainer);
             thoughtText = view.findViewById(R.id.thoughtText);
+            thinkingStatusText = view.findViewById(R.id.thinkingStatusText);
             aiMessageText = view.findViewById(R.id.aiMessageText);
             codeBlocksContainer = view.findViewById(R.id.codeBlocksContainer);
             thinkingLayout = view.findViewById(R.id.thinkingLayout);

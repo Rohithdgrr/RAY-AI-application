@@ -146,6 +146,15 @@ public class ChatActivity extends AppCompatActivity {
             }
 
             @Override
+            public void onStatus(String status) {
+                runOnUiThread(() -> {
+                    if (isDestroyed()) return;
+                    responseMessage.setStatus(status);
+                    adapter.notifyItemChanged(responseIndex);
+                });
+            }
+
+            @Override
             public void onComplete() {
                 runOnUiThread(() -> {
                     if (isDestroyed()) return;
