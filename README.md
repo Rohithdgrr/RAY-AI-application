@@ -1,4 +1,4 @@
-![RAY AI LOGO](https://github.com/user-attachments/assets/b3a1eec3-6933-4b69-8203-219da94ec844) 
+<img width="541" height="271" alt="image" src="https://github.com/user-attachments/assets/9d5369b6-8fdc-4405-b055-4291b6570bd3" />
 
 
 
