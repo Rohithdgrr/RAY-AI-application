@@ -15,10 +15,10 @@ RAY AI is a high-performance, private, and secure offline AI assistant for Andro
 - **Model Management**: Download and manage lightweight models optimized for mobile (TinyLlama, Qwen, etc.).
 - **Real-time Streaming**: Watch responses generate token-by-token.
 - **Secure Storage**: Models and sensitive data are protected with hardware-backed encryption.
-
-- ![ray 1](https://github.com/user-attachments/assets/47d10911-8cde-45ab-99bb-4a0638284025) | ![ray 2](https://github.com/user-attachments/assets/aa464361-aa29-4ab2-a6df-25c9b60068bf)
-- ![ray 3](https://github.com/user-attachments/assets/5711e228-3975-4916-9b51-d9fb7ae5bae5) | ![ray 4](https://github.com/user-attachments/assets/22aeaefa-7fc1-457a-b12c-314e4a8a01cf)
-
+|           |           |
+|-----------|-----------|
+| ![ray 1](https://github.com/user-attachments/assets/e8c2f098-a4f5-4c6c-99ac-7b17c989a6f3) | ![ray 2](https://github.com/user-attachments/assets/b65004bf-e6cd-4c25-98e4-e447945d5be2) |
+| ![ray 3](https://github.com/user-attachments/assets/93f8099c-99a6-45a0-8354-51e3c5e34ce0) | ![ray 4](https://github.com/user-attachments/assets/3f4001cd-515c-4028-8265-16f2a650ae25) |
 
 
 
