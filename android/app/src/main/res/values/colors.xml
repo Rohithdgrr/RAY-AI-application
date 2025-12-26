@@ -94,4 +94,5 @@
     <color name="tier_light">#ff8100</color>
     <color name="tier_ultra_light">#ffa700</color>
     <color name="primary_translucent">#33FF5722</color>
+    <color name="accent_primary">#ff4d00</color>
 </resources>

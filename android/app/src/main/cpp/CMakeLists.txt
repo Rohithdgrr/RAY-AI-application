@@ -26,7 +26,7 @@ add_subdirectory(llama.cpp)
 add_library(
         llama-jni
         SHARED
-        native-lib.cpp
+        native-lib-v2.cpp
 )
 
 find_library(

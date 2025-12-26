@@ -5,6 +5,7 @@
 #include <vector>
 #include <atomic>
 #include <mutex>
+#include <chrono>
 
 #include "llama.cpp/include/llama.h"
 #include "llama.cpp/common/common.h"
@@ -41,23 +42,23 @@ Java_com_example_offlinellm_LlamaInference_nativeInit(JNIEnv *env, jobject thiz,
         return 0;
     }
 
-    auto cparams = llama_context_default_params();
-    cparams.n_ctx = 4096;
-    cparams.n_batch = 1024;
-    cparams.n_ubatch = 512;
+    auto cparams_v2 = llama_context_default_params();
+    cparams_v2.n_ctx = 4096;
+    cparams_v2.n_batch = 1024;
+    cparams_v2.n_ubatch = 512;
     
     // Optimize threads for mobile: using too many cores can cause thermal throttling
     uint32_t n_threads = std::thread::hardware_concurrency();
     if (n_threads > 6) n_threads = 6; // Cap at 6 for stability on mobile
     if (n_threads < 4 && std::thread::hardware_concurrency() >= 4) n_threads = 4;
     
-    cparams.n_threads = n_threads;
-    cparams.n_threads_batch = n_threads;
+    cparams_v2.n_threads = n_threads;
+    cparams_v2.n_threads_batch = n_threads;
     
     // Enable flash attention if possible (massively speeds up long contexts)
-    cparams.flash_attn = true;
+    cparams_v2.flash_attn_type = LLAMA_FLASH_ATTN_TYPE_ENABLED;
 
-    llama_context * ctx = llama_init_from_model(model, cparams);
+    llama_context * ctx = llama_init_from_model(model, cparams_v2);
     if (!ctx) {
         LOGE("nativeInit: Failed to create context");
         llama_model_free(model);
@@ -103,7 +104,7 @@ Java_com_example_offlinellm_LlamaInference_nativeGenerate(JNIEnv *env, jobject t
     // Initial batch for prompt
     llama_batch batch = llama_batch_init(tokens.size(), 0, 1);
     for (size_t i = 0; i < tokens.size(); i++) {
-        common_batch_add(batch, tokens[i], n_past + i, { 0 }, i == tokens.size() - 1);
+        common_batch_add(batch, tokens[i], n_past + i, { 0 }, i == (int)tokens.size() - 1);
     }
 
     auto start_time = std::chrono::high_resolution_clock::now();
@@ -151,7 +152,7 @@ Java_com_example_offlinellm_LlamaInference_nativeGenerate(JNIEnv *env, jobject t
         }
 
         // Prepare next batch (single token)
-        llama_batch_clear(batch);
+        batch.n_tokens = 0;
         common_batch_add(batch, id, n_past, { 0 }, true);
         
         n_remain--;
