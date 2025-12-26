@@ -72,9 +72,12 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
             holder.aiMessageContainer.setVisibility(View.VISIBLE);
 
             String text = message.getText();
+            String thought = message.getThought();
             holder.codeBlocksContainer.removeAllViews();
 
-            if (message.isGenerating()) {
+            boolean hasContent = (text != null && !text.trim().isEmpty()) || (thought != null && !thought.trim().isEmpty());
+
+            if (message.isGenerating() && !hasContent) {
                 holder.thinkingLayout.setVisibility(View.VISIBLE);
                 holder.thoughtContainer.setVisibility(View.GONE);
                 holder.aiMessageText.setVisibility(View.GONE);
@@ -87,21 +90,25 @@ public class ChatAdapter extends RecyclerView.Adapter<ChatAdapter.ViewHolder> {
                 holder.metadataLayout.setVisibility(View.VISIBLE);
 
                 // Thought / Reasoning display
-                if (message.getThought() != null && !message.getThought().trim().isEmpty()) {
+                if (thought != null && !thought.trim().isEmpty()) {
                     holder.thoughtContainer.setVisibility(View.VISIBLE);
-                    holder.thoughtText.setText(message.getThought().trim());
+                    holder.thoughtText.setText(thought.trim());
                 } else {
                     holder.thoughtContainer.setVisibility(View.GONE);
                 }
 
-                if (text.contains("```")) {
+                if (text != null && text.contains("```")) {
                     holder.codeBlocksContainer.setVisibility(View.VISIBLE);
                     holder.aiMessageText.setVisibility(View.GONE);
                     renderMixedContent(holder, text);
                 } else {
                     holder.codeBlocksContainer.setVisibility(View.GONE);
                     holder.aiMessageText.setVisibility(View.VISIBLE);
-                    markwon.setMarkdown(holder.aiMessageText, text);
+                    if (text != null) {
+                        markwon.setMarkdown(holder.aiMessageText, text);
+                    } else {
+                        holder.aiMessageText.setText("");
+                    }
                 }
             }
 

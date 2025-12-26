@@ -18,6 +18,8 @@ public class ChatActivity extends AppCompatActivity {
     private List<ChatMessage> messages;
     private EditText chatInput;
     private TextView statusIndicator;
+    private Button btnSend;
+    private android.widget.ImageButton btnStop;
     private volatile InferenceEngine engine;
 
     @Override
@@ -28,7 +30,8 @@ public class ChatActivity extends AppCompatActivity {
         statusIndicator = findViewById(R.id.statusIndicator);
         recyclerView = findViewById(R.id.chatRecyclerView);
         chatInput = findViewById(R.id.chatInput);
-        Button btnSend = findViewById(R.id.btnSend);
+        btnSend = findViewById(R.id.btnSend);
+        btnStop = findViewById(R.id.btnStop);
 
         findViewById(R.id.btnModels).setOnClickListener(v -> {
             ModelBottomSheet bottomSheet = new ModelBottomSheet();
@@ -48,6 +51,22 @@ public class ChatActivity extends AppCompatActivity {
         initEngine();
 
         btnSend.setOnClickListener(v -> sendMessage());
+        btnStop.setOnClickListener(v -> {
+            if (engine != null) {
+                engine.stop();
+                setGeneratingState(false);
+            }
+        });
+    }
+
+    private void setGeneratingState(boolean generating) {
+        runOnUiThread(() -> {
+            btnSend.setVisibility(generating ? android.view.View.GONE : android.view.View.VISIBLE);
+            btnStop.setVisibility(generating ? android.view.View.VISIBLE : android.view.View.GONE);
+            if (!generating) {
+                chatInput.setEnabled(true);
+            }
+        });
     }
 
     private void initEngine() {
@@ -93,11 +112,14 @@ public class ChatActivity extends AppCompatActivity {
         if (msgText.isEmpty() || currentEngine == null || !currentEngine.isLoaded()) return;
 
         chatInput.setText("");
+        setGeneratingState(true);
+        
         messages.add(new ChatMessage("You", msgText));
         adapter.notifyItemInserted(messages.size() - 1);
         recyclerView.scrollToPosition(messages.size() - 1);
 
         ChatMessage responseMessage = new ChatMessage("RAY", "");
+        responseMessage.startGeneration();
         messages.add(responseMessage);
         int responseIndex = messages.size() - 1;
         adapter.notifyItemInserted(responseIndex);
@@ -114,12 +136,31 @@ public class ChatActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onComplete() { }
+            public void onThought(String thought) {
+                runOnUiThread(() -> {
+                    if (isDestroyed()) return;
+                    responseMessage.setThought(responseMessage.getThought() + thought);
+                    adapter.notifyItemChanged(responseIndex);
+                    recyclerView.scrollToPosition(responseIndex);
+                });
+            }
+
+            @Override
+            public void onComplete() {
+                runOnUiThread(() -> {
+                    if (isDestroyed()) return;
+                    responseMessage.finishGeneration();
+                    adapter.notifyItemChanged(responseIndex);
+                    setGeneratingState(false);
+                });
+            }
 
             @Override
             public void onError(String message) {
                 runOnUiThread(() -> {
                     if (isDestroyed()) return;
+                    responseMessage.finishGeneration();
+                    setGeneratingState(false);
                     Toast.makeText(getApplicationContext(), message, Toast.LENGTH_SHORT).show();
                 });
             }
