@@ -37,6 +37,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Android/C++ Build Artifacts
 android/.gradle/
 android/**/.gradle/
 android/app/build/
@@ -44,12 +45,22 @@ android/**/build/
 android/app/.cxx/
 android/**/.cxx/
 android/.cxx/
+android/**/intermediates/
+android/**/outputs/
+android/**/tmp/
 *.ninja
 .ninja_deps
 .ninja_log
 *.o
 *.so
+*.a
+*.lib
+*.dll
+*.dylib
 android/local.properties
 android/gradle-8.4/
 android/gradle-8.4-bin.zip
 android/app/*.keystore
+android/app/release/
+android/app/debug/
+android/captures/
